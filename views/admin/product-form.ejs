@@ -1,0 +1,117 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-card">
+  <% if (error) { %>
+  <div class="alert alert-error"><%= error %></div>
+  <% } %>
+
+  <form action="/admin/produits/<%= product && product.id ? 'modifier/' + product.id : 'ajouter' %>" method="POST" enctype="multipart/form-data">
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Nom du produit *</label>
+        <input type="text" name="name" required class="form-input" value="<%= product ? product.name : '' %>">
+      </div>
+      <div class="form-group">
+        <label>Catégorie</label>
+        <select name="category_id" class="form-input">
+          <option value="">— Aucune —</option>
+          <% categories.forEach(c => { %>
+          <option value="<%= c.id %>" <%= product && product.category_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Description courte</label>
+      <input type="text" name="short_description" class="form-input" value="<%= product ? (product.short_description || '') : '' %>" maxlength="200">
+    </div>
+
+    <div class="form-group">
+      <label>Description complète</label>
+      <textarea name="description" rows="5" class="form-input"><%= product ? (product.description || '') : '' %></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Prix (FCFA) *</label>
+        <input type="number" name="price" required class="form-input" min="0" value="<%= product ? product.price : '' %>">
+      </div>
+      <div class="form-group">
+        <label>Prix promo (FCFA)</label>
+        <input type="number" name="discount_price" class="form-input" min="0" value="<%= product && product.discount_price ? product.discount_price : '' %>">
+      </div>
+      <div class="form-group">
+        <label>Stock</label>
+        <input type="number" name="stock_quantity" class="form-input" min="0" value="<%= product ? (product.stock_quantity || 0) : 0 %>">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Marque</label>
+        <input type="text" name="brand" class="form-input" value="<%= product ? (product.brand || '') : '' %>">
+      </div>
+      <div class="form-group">
+        <label>SKU</label>
+        <input type="text" name="sku" class="form-input" value="<%= product ? (product.sku || '') : '' %>">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_available" value="1" <%= !product || product.is_available ? 'checked' : '' %>>
+          Disponible
+        </label>
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_featured" value="1" <%= product && product.is_featured ? 'checked' : '' %>>
+          Produit en vedette
+        </label>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Images du produit</label>
+      <input type="file" name="images" multiple accept="image/*" class="form-input">
+      <span class="form-help">Formats : JPG, PNG, WebP. Max 5 Mo par image.</span>
+    </div>
+
+    <% if (product && product.images && product.images.length > 0) { %>
+    <div class="existing-images">
+      <label>Images actuelles</label>
+      <div class="image-grid">
+        <% product.images.forEach(img => { %>
+        <div class="image-item">
+          <img src="<%= img.image_path %>" alt="">
+          <form action="/admin/produits/supprimer-image/<%= img.id %>" method="POST" style="position:absolute;top:4px;right:4px">
+            <button type="submit" class="img-delete-btn" title="Supprimer" onclick="return confirm('Supprimer cette image ?')">×</button>
+          </form>
+        </div>
+        <% }); %>
+      </div>
+    </div>
+    <% } %>
+
+    <details class="form-details">
+      <summary>SEO (optionnel)</summary>
+      <div class="form-group">
+        <label>Meta titre</label>
+        <input type="text" name="meta_title" class="form-input" value="<%= product ? (product.meta_title || '') : '' %>">
+      </div>
+      <div class="form-group">
+        <label>Meta description</label>
+        <textarea name="meta_description" rows="2" class="form-input"><%= product ? (product.meta_description || '') : '' %></textarea>
+      </div>
+    </details>
+
+    <div class="form-actions">
+      <a href="/admin/produits" class="btn btn-outline">Annuler</a>
+      <button type="submit" class="btn btn-primary"><%= product && product.id ? 'Enregistrer' : 'Ajouter le produit' %></button>
+    </div>
+  </form>
+</div>
+
+<%- include('../partials/admin-footer') %>

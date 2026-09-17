@@ -1,0 +1,57 @@
+<%- include('partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <div class="confirmation-box">
+      <div class="confirmation-icon">✓</div>
+      <h1>Commande confirmée !</h1>
+      <p class="confirmation-number">Numéro de commande : <strong><%= order.order_number %></strong></p>
+      <p>Merci pour votre commande. Nous allons la traiter et vous contacter pour organiser la livraison.</p>
+
+      <div class="confirmation-details">
+        <h3>Détails de la commande</h3>
+        <table class="confirmation-table">
+          <thead>
+            <tr><th>Produit</th><th>Qté</th><th>Prix</th></tr>
+          </thead>
+          <tbody>
+            <% items.forEach(item => { %>
+            <tr>
+              <td><%= item.product_name %></td>
+              <td><%= item.quantity %></td>
+              <td><%= formatPrice(item.subtotal) %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+        <div class="summary-row"><span>Sous-total</span><span><%= formatPrice(order.subtotal) %></span></div>
+        <div class="summary-row"><span>Livraison</span><span><%= formatPrice(order.delivery_fee) %></span></div>
+        <div class="summary-row summary-total"><span>Total</span><span><%= formatPrice(order.total) %></span></div>
+        <div class="summary-row"><span>Paiement</span><span>À la livraison</span></div>
+      </div>
+
+      <div class="confirmation-delivery">
+        <h3>Livraison</h3>
+        <p><%= order.delivery_full_name %><br>
+           <%= order.delivery_phone %><br>
+           <%= order.delivery_neighborhood %>, <%= order.delivery_city %><br>
+           <% if (order.delivery_address) { %><%= order.delivery_address %><br><% } %>
+           <% if (order.delivery_landmark) { %>Repère : <%= order.delivery_landmark %><% } %>
+        </p>
+      </div>
+
+      <div class="confirmation-actions">
+        <a href="/compte" class="btn btn-outline">Voir mes commandes</a>
+        <%
+          const waMsg = `Bonjour, je viens de passer la commande ${order.order_number} sur SoukEnLigne.\n\nTotal : ${formatPrice(order.total)}\n\nJe voudrais confirmer les détails de livraison.`;
+        %>
+        <a href="<%= whatsappLink(whatsappNumber, waMsg) %>" target="_blank" class="btn btn-wa">
+          Confirmer sur WhatsApp
+        </a>
+        <a href="/boutique" class="btn btn-primary">Continuer vos achats</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

@@ -1,0 +1,61 @@
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <a href="/compte" class="back-link">Retour à mon compte</a>
+    <h1 class="page-title">Commande <%= order.order_number %></h1>
+
+    <div class="order-detail-grid">
+      <div class="order-detail-main">
+        <div class="order-status-bar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <span class="status-badge <%= statusClass(order.status) %>"><%= statusLabel(order.status) %></span>
+            <span class="text-muted" style="margin-left: 0.5rem;">Passée le <%= new Date(order.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) %></span>
+          </div>
+          <% if (order.status === 'pending') { %>
+            <form action="/compte/commande/<%= order.order_number %>/annuler" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible.');">
+              <button type="submit" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;">Annuler la commande</button>
+            </form>
+          <% } %>
+        </div>
+
+        <h3>Articles commandés</h3>
+        <table class="data-table">
+          <thead><tr><th>Produit</th><th>Prix</th><th>Qté</th><th>Sous-total</th></tr></thead>
+          <tbody>
+            <% items.forEach(item => { %>
+            <tr>
+              <td><%= item.product_name %></td>
+              <td><%= formatPrice(item.product_price) %></td>
+              <td><%= item.quantity %></td>
+              <td><%= formatPrice(item.subtotal) %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="order-detail-side">
+        <div class="cart-summary">
+          <h3>Résumé</h3>
+          <div class="summary-row"><span>Sous-total</span><span><%= formatPrice(order.subtotal) %></span></div>
+          <div class="summary-row"><span>Livraison</span><span><%= formatPrice(order.delivery_fee) %></span></div>
+          <div class="summary-row summary-total"><span>Total</span><span><%= formatPrice(order.total) %></span></div>
+          <div class="summary-row"><span>Paiement</span><span>À la livraison</span></div>
+        </div>
+
+        <div class="cart-summary">
+          <h3>Livraison</h3>
+          <p><%= order.delivery_full_name %><br>
+             <%= order.delivery_phone %><br>
+             <%= order.delivery_neighborhood %>, <%= order.delivery_city %><br>
+             <% if (order.delivery_address) { %><%= order.delivery_address %><br><% } %>
+             <% if (order.delivery_landmark) { %>Repère : <%= order.delivery_landmark %><% } %>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

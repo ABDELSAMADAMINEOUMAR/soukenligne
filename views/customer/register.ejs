@@ -1,0 +1,48 @@
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-box">
+      <h1 class="auth-title">Créer un compte</h1>
+      <p class="auth-sub">Inscrivez-vous pour passer commande et suivre vos livraisons.</p>
+
+      <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="/compte/inscription" method="POST" class="auth-form">
+        <div class="form-group">
+          <label for="full_name">Nom complet *</label>
+          <input type="text" id="full_name" name="full_name" required class="form-input" value="<%= form.full_name || '' %>">
+        </div>
+        <div class="form-group">
+          <label for="email">Email *</label>
+          <input type="email" id="email" name="email" required class="form-input" value="<%= form.email || '' %>">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="phone">Téléphone</label>
+            <input type="tel" id="phone" name="phone" class="form-input" placeholder="+235 ..." value="<%= form.phone || '' %>">
+          </div>
+          <div class="form-group">
+            <label for="whatsapp">WhatsApp</label>
+            <input type="tel" id="whatsapp" name="whatsapp" class="form-input" placeholder="+235 ..." value="<%= form.whatsapp || '' %>">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="password">Mot de passe *</label>
+          <input type="password" id="password" name="password" required class="form-input" minlength="6">
+        </div>
+        <div class="form-group">
+          <label for="password_confirm">Confirmer le mot de passe *</label>
+          <input type="password" id="password_confirm" name="password_confirm" required class="form-input">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Créer mon compte</button>
+      </form>
+
+      <p class="auth-switch">Déjà inscrit ? <a href="/compte/connexion">Se connecter</a></p>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

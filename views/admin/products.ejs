@@ -1,0 +1,136 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-toolbar" style="display: flex; gap: 1rem; align-items: center;">
+  <a href="/admin/produits/ajouter" class="btn btn-primary">+ Ajouter un produit</a>
+  <% if (typeof filterCategory !== 'undefined' && filterCategory) { %>
+    <a href="/admin/produits" class="btn btn-outline" style="border-color: #ef4444; color: #ef4444;">Effacer le filtre de catégorie ✕</a>
+  <% } %>
+</div>
+
+<div class="admin-card">
+  <% if (products.length === 0) { %>
+  <p class="text-muted">Aucun produit. Commencez par en ajouter un.</p>
+  <% } else { %>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr><th>Image</th><th>Produit</th><th>Prix</th><th>Stock</th><th>Statut</th><th>Actions</th></tr>
+      </thead>
+      <tbody>
+        <% products.filter(p => p.status !== 'deleted').forEach(p => { %>
+        <tr>
+          <td>
+            <% if (p.image) { %>
+            <img src="<%= p.image %>" alt="" class="admin-thumb">
+            <% } else { %>
+            <div class="admin-thumb-empty"></div>
+            <% } %>
+          </td>
+          <td>
+            <strong><%= p.name %></strong>
+            <% if (p.category_name) { %><br><span class="text-muted text-sm"><%= p.category_name %></span><% } %>
+            <% if (p.is_featured) { %><span class="badge-featured">★ Vedette</span><% } %>
+          </td>
+          <td>
+            <% if (p.discount_price) { %>
+            <span class="price-current"><%= formatPrice(p.discount_price) %></span><br>
+            <span class="price-original text-sm"><%= formatPrice(p.price) %></span>
+            <% } else { %>
+            <%= formatPrice(p.price) %>
+            <% } %>
+          </td>
+          <td><span class="<%= p.stock_quantity <= 5 ? 'stock-low' : '' %>"><%= p.stock_quantity %></span></td>
+          <td><span class="status-badge <%= p.is_available ? 'status-confirmed' : 'status-cancelled' %>"><%= p.is_available ? 'Actif' : 'Inactif' %></span></td>
+          <td class="actions-cell">
+            <a href="/admin/produits/modifier/<%= p.id %>" class="btn btn-sm btn-outline">Modifier</a>
+            <button type="button" class="btn btn-sm btn-outline" title="Aperçu rapide" onclick='openQuickView(<%- JSON.stringify(p).replace(/'/g, "\\'") %>)'>👁</button>
+            <form action="/admin/produits/supprimer/<%= p.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce produit ?')">
+              <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+<div id="quick-view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+  <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 650px; display: flex; gap: 2rem; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+    <button type="button" onclick="closeQuickView()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+    <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; padding: 1rem;">
+      <img id="qv-image" src="" alt="" style="max-width: 100%; max-height: 300px; object-fit: contain;">
+    </div>
+    <div style="flex: 1.5;">
+      <h2 id="qv-title" style="margin-top: 0; margin-bottom: 0.25rem; font-size: 1.5rem; color: #1e293b;"></h2>
+      <p id="qv-category" style="color: #64748b; font-size: 0.875rem; margin-top: 0; margin-bottom: 1rem;"></p>
+      
+      <div style="margin-bottom: 1.5rem;">
+        <span id="qv-price" style="font-size: 1.5rem; font-weight: 700; color: var(--primary);"></span>
+        <span id="qv-original-price" style="text-decoration: line-through; color: #94a3b8; margin-left: 0.5rem; font-size: 1rem;"></span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; background: #f1f5f9; padding: 1rem; border-radius: 8px;">
+        <div>
+          <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Stock</span>
+          <span id="qv-stock" style="font-weight: 600; color: #334155;"></span>
+        </div>
+        <div>
+          <span style="display: block; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Statut</span>
+          <span id="qv-status" style="font-weight: 600; color: #334155;"></span>
+        </div>
+      </div>
+
+      <p id="qv-desc" style="font-size: 0.875rem; color: #475569; line-height: 1.5;"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+function openQuickView(product) {
+  document.getElementById('qv-title').textContent = product.name;
+  document.getElementById('qv-category').textContent = product.category_name || 'Sans catégorie';
+  
+  if (product.discount_price) {
+    document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.discount_price) + ' FCFA';
+    document.getElementById('qv-original-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
+  } else {
+    document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
+    document.getElementById('qv-original-price').textContent = '';
+  }
+
+  document.getElementById('qv-stock').textContent = product.stock_quantity;
+  if (product.stock_quantity <= 5) {
+    document.getElementById('qv-stock').style.color = '#ef4444';
+  } else {
+    document.getElementById('qv-stock').style.color = '#334155';
+  }
+
+  const statusEl = document.getElementById('qv-status');
+  statusEl.textContent = product.is_available ? 'Actif' : 'Inactif';
+  statusEl.style.color = product.is_available ? '#10b981' : '#ef4444';
+
+  document.getElementById('qv-desc').textContent = product.short_description || 'Aucune description courte disponible.';
+  
+  const imgEl = document.getElementById('qv-image');
+  if (product.image) {
+    imgEl.src = product.image;
+    imgEl.style.display = 'block';
+  } else {
+    imgEl.style.display = 'none';
+  }
+
+  const modal = document.getElementById('quick-view-modal');
+  modal.style.display = 'flex';
+}
+
+function closeQuickView() {
+  document.getElementById('quick-view-modal').style.display = 'none';
+}
+
+// Close when clicking outside the card
+document.getElementById('quick-view-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeQuickView();
+});
+</script>
+<%- include('../partials/admin-footer') %>

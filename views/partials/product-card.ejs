@@ -1,0 +1,28 @@
+<a href="/produit/<%= product.slug %>" class="product-card">
+  <div class="product-card-img">
+    <% if (product.image) { %>
+    <img src="<%= product.image %>" alt="<%= product.name %>" loading="lazy">
+    <% } else { %>
+    <div class="product-card-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+    </div>
+    <% } %>
+    <% if (product.discount_price) { %>
+    <span class="product-badge">Promo</span>
+    <% } %>
+  </div>
+  <div class="product-card-body">
+    <% if (product.category_name) { %>
+    <span class="product-card-cat"><%= product.category_name %></span>
+    <% } %>
+    <h3 class="product-card-title"><%= product.name %></h3>
+    <div class="product-card-price">
+      <% if (product.discount_price) { %>
+      <span class="price-current"><%= formatPrice(product.discount_price) %></span>
+      <span class="price-original"><%= formatPrice(product.price) %></span>
+      <% } else { %>
+      <span class="price-current"><%= formatPrice(product.price) %></span>
+      <% } %>
+    </div>
+  </div>
+</a>

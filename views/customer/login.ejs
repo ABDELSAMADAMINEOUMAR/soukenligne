@@ -1,0 +1,30 @@
+<%- include('../partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <div class="auth-box">
+      <h1 class="auth-title">Connexion</h1>
+      <p class="auth-sub">Connectez-vous pour passer votre commande et suivre vos achats.</p>
+
+      <% if (error) { %>
+      <div class="alert alert-error"><%= error %></div>
+      <% } %>
+
+      <form action="/compte/connexion" method="POST" class="auth-form">
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input type="email" id="email" name="email" required class="form-input" placeholder="votre@email.com">
+        </div>
+        <div class="form-group">
+          <label for="password">Mot de passe</label>
+          <input type="password" id="password" name="password" required class="form-input" placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg btn-block">Se connecter</button>
+      </form>
+
+      <p class="auth-switch">Pas encore de compte ? <a href="/compte/inscription">Créer un compte</a></p>
+    </div>
+  </div>
+</section>
+
+<%- include('../partials/footer') %>

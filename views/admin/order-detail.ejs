@@ -1,0 +1,81 @@
+<%- include('../partials/admin-header') %>
+
+<a href="/admin/commandes" class="back-link">Retour aux commandes</a>
+
+<div class="admin-grid-2">
+  <div class="admin-card">
+    <h3>Articles commandés</h3>
+    <table class="data-table">
+      <thead><tr><th>Produit</th><th>Prix unitaire</th><th>Qté</th><th>Sous-total</th></tr></thead>
+      <tbody>
+        <% items.forEach(item => { %>
+        <tr>
+          <td><%= item.product_name %></td>
+          <td><%= formatPrice(item.product_price) %></td>
+          <td><%= item.quantity %></td>
+          <td><%= formatPrice(item.subtotal) %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <div class="summary-row"><span>Sous-total</span><span><%= formatPrice(order.subtotal) %></span></div>
+    <div class="summary-row"><span>Livraison</span><span><%= formatPrice(order.delivery_fee) %></span></div>
+    <div class="summary-row summary-total"><span>Total</span><span><%= formatPrice(order.total) %></span></div>
+
+    <h3 style="margin-top:1.5rem">Livraison</h3>
+    <p>
+      <strong><%= order.delivery_full_name %></strong><br>
+      Tél : <%= order.delivery_phone %><br>
+      <%= order.delivery_neighborhood %>, <%= order.delivery_city %><br>
+      <% if (order.delivery_address) { %><%= order.delivery_address %><br><% } %>
+      <% if (order.delivery_landmark) { %>Repère : <%= order.delivery_landmark %><br><% } %>
+      <% if (order.delivery_notes) { %>Notes : <%= order.delivery_notes %><% } %>
+    </p>
+  </div>
+
+  <div>
+    <div class="admin-card">
+      <h3>Informations</h3>
+      <div class="info-row"><span>Commande</span><strong><%= order.order_number %></strong></div>
+      <div class="info-row"><span>Date</span><span><%= new Date(order.created_at).toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' }) %></span></div>
+      <div class="info-row"><span>Client</span><span><%= order.customer_name %></span></div>
+      <div class="info-row"><span>Email</span><span><%= order.customer_email || '—' %></span></div>
+      <div class="info-row"><span>Téléphone</span><span><%= order.customer_phone || '—' %></span></div>
+      <div class="info-row"><span>Paiement</span><span>À la livraison</span></div>
+      <div class="info-row"><span>Statut</span><span class="status-badge <%= statusClass(order.status) %>"><%= statusLabel(order.status) %></span></div>
+
+      <% if (order.customer_whatsapp || order.delivery_phone) { %>
+      <%
+        const waNum = order.customer_whatsapp || order.delivery_phone;
+        const waMsg = `Bonjour ${order.delivery_full_name}, votre commande ${order.order_number} sur SoukEnLigne est en cours de traitement. Total : ${formatPrice(order.total)}`;
+      %>
+      <a href="<%= whatsappLink(waNum, waMsg) %>" target="_blank" class="btn btn-wa btn-block" style="margin-top:1rem">
+        Contacter le client sur WhatsApp
+      </a>
+      <% } %>
+    </div>
+
+    <div class="admin-card">
+      <h3>Mettre à jour le statut</h3>
+      <form action="/admin/commandes/<%= order.id %>/statut" method="POST">
+        <div class="form-group">
+          <select name="status" class="form-input">
+            <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>En attente</option>
+            <option value="confirmed" <%= order.status === 'confirmed' ? 'selected' : '' %>>Confirmée</option>
+            <option value="preparing" <%= order.status === 'preparing' ? 'selected' : '' %>>En préparation</option>
+            <option value="out_for_delivery" <%= order.status === 'out_for_delivery' ? 'selected' : '' %>>En livraison</option>
+            <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Livrée</option>
+            <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Annulée</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes internes</label>
+          <textarea name="admin_notes" rows="2" class="form-input"><%= order.admin_notes || '' %></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Mettre à jour</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/admin-footer') %>

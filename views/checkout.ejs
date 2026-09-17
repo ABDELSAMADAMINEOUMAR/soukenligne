@@ -1,0 +1,152 @@
+<%- include('partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <h1 class="page-title">Passer la commande</h1>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="checkout-layout">
+      <div class="checkout-form-col">
+        <form action="/commande/confirmer" method="POST" id="checkout-form">
+          <div class="form-section">
+            <h2 class="form-section-title">Informations de livraison</h2>
+
+            <div class="form-group">
+              <label for="delivery_full_name">Nom complet *</label>
+              <input type="text" id="delivery_full_name" name="delivery_full_name" required
+                value="<%= defaultAddr ? defaultAddr.full_name : user.full_name %>" class="form-input">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="delivery_phone">Téléphone *</label>
+                <input type="tel" id="delivery_phone" name="delivery_phone" required
+                  value="<%= defaultAddr ? defaultAddr.phone : (user.phone || '') %>" class="form-input" placeholder="+235 ...">
+              </div>
+              <div class="form-group">
+                <label for="delivery-zone-select">Ville / Zone *</label>
+                <% if (zones.length > 0) { %>
+                  <select name="delivery_zone_id" class="form-input" id="delivery-zone-select" required>
+                    <option value="" disabled <%= !defaultAddr ? 'selected' : '' %>>Sélectionnez une zone</option>
+                    <% zones.forEach(zone => { %>
+                    <option value="<%= zone.id %>" data-fee="<%= zone.fee %>" <%= defaultAddr && defaultAddr.city === zone.name ? 'selected' : '' %>><%= zone.name %> — <%= formatPrice(zone.fee) %></option>
+                    <% }); %>
+                  </select>
+                <% } else { %>
+                  <input type="text" id="delivery_city" name="delivery_city" required
+                    value="<%= defaultAddr ? defaultAddr.city : '' %>" class="form-input" placeholder="N'Djaména">
+                <% } %>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_neighborhood">Quartier *</label>
+              <input type="text" id="delivery_neighborhood" name="delivery_neighborhood" required
+                value="<%= defaultAddr ? defaultAddr.neighborhood : '' %>" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_address">Adresse</label>
+              <input type="text" id="delivery_address" name="delivery_address"
+                value="<%= defaultAddr ? defaultAddr.address_line : '' %>" class="form-input" placeholder="Rue, numéro...">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_landmark">Point de repère</label>
+              <input type="text" id="delivery_landmark" name="delivery_landmark"
+                value="<%= defaultAddr ? defaultAddr.landmark : '' %>" class="form-input" placeholder="Près de la mosquée, en face du marché...">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_notes">Notes supplémentaires</label>
+              <textarea id="delivery_notes" name="delivery_notes" rows="2" class="form-input" placeholder="Instructions spéciales pour la livraison..."></textarea>
+            </div>
+          </div>
+
+
+
+          <div class="form-section">
+            <h2 class="form-section-title">Mode de paiement</h2>
+            <div class="payment-method-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <div>
+                <strong>Paiement à la livraison</strong>
+                <p>Vous payez en espèces au moment de la réception de votre commande.</p>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-block checkout-btn">
+            Confirmer la commande
+          </button>
+        </form>
+      </div>
+
+      <div class="checkout-summary-col">
+        <div class="cart-summary sticky-summary">
+          <h3>Votre commande</h3>
+          <div class="checkout-items">
+            <% cart.forEach(item => { %>
+            <div class="checkout-item">
+              <div class="checkout-item-img">
+                <% if (item.image) { %><img src="<%= item.image %>" alt=""><% } %>
+                <span class="checkout-item-qty"><%= item.quantity %></span>
+              </div>
+              <div class="checkout-item-info">
+                <span class="checkout-item-name"><%= item.name %></span>
+                <span class="checkout-item-price"><%= formatPrice(item.price * item.quantity) %></span>
+              </div>
+            </div>
+            <% }); %>
+          </div>
+          <div class="summary-row">
+            <span>Sous-total</span>
+            <span><%= formatPrice(cartTotal) %></span>
+          </div>
+          <div class="summary-row">
+            <span>Livraison</span>
+            <span id="delivery-fee-display"><%= formatPrice(zones.length > 0 ? zones[0].fee : defaultFee) %></span>
+          </div>
+          <div class="summary-row summary-total">
+            <span>Total</span>
+            <span id="total-display"><%= formatPrice(cartTotal + (zones.length > 0 ? zones[0].fee : defaultFee)) %></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+(function() {
+  const select = document.getElementById('delivery-zone-select');
+  const feeEl = document.getElementById('delivery-fee-display');
+  const totalEl = document.getElementById('total-display');
+  const subtotal = <%= cartTotal %>;
+
+  function fmt(n) {
+    return new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
+  }
+
+  function updateTotals() {
+    if (!select) return;
+    const option = select.options[select.selectedIndex];
+    if (option && option.dataset.fee) {
+      const fee = parseInt(option.dataset.fee) || 0;
+      feeEl.textContent = fmt(fee);
+      totalEl.textContent = fmt(subtotal + fee);
+    }
+  }
+
+  if (select) {
+    select.addEventListener('change', updateTotals);
+    // Initialize on load
+    updateTotals();
+  }
+})();
+</script>
+
+<%- include('partials/footer') %>

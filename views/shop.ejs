@@ -1,0 +1,64 @@
+<%- include('partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <div class="shop-header">
+      <h1 class="page-title"><%= activeCategory ? activeCategory.name : (query ? 'Résultats pour « ' + query + ' »' : 'Boutique') %></h1>
+      <span class="shop-count"><%= total %> produit<%= total > 1 ? 's' : '' %></span>
+    </div>
+
+    <div class="shop-layout">
+      <!-- Sidebar filters (desktop) -->
+      <aside class="shop-sidebar">
+        <div class="filter-group">
+          <h3>Catégories</h3>
+          <ul class="filter-list">
+            <li><a href="/boutique" class="<%= !activeCategory ? 'active' : '' %>">Toutes les catégories</a></li>
+            <% categories.forEach(cat => { %>
+            <li><a href="/boutique?categorie=<%= cat.slug %><%= query ? '&q=' + query : '' %>" class="<%= activeCategory && activeCategory.slug === cat.slug ? 'active' : '' %>"><%= cat.name %></a></li>
+            <% }); %>
+          </ul>
+        </div>
+      </aside>
+
+      <div class="shop-main">
+        <!-- Sort bar -->
+        <div class="shop-sort">
+          <label>Trier par :</label>
+          <select onchange="window.location.href=this.value" class="sort-select">
+            <option value="/boutique?<%= activeCategory ? 'categorie=' + activeCategory.slug + '&' : '' %><%= query ? 'q=' + query + '&' : '' %>tri=recent" <%= tri === '' || tri === 'recent' ? 'selected' : '' %>>Plus récents</option>
+            <option value="/boutique?<%= activeCategory ? 'categorie=' + activeCategory.slug + '&' : '' %><%= query ? 'q=' + query + '&' : '' %>tri=prix-asc" <%= tri === 'prix-asc' ? 'selected' : '' %>>Prix croissant</option>
+            <option value="/boutique?<%= activeCategory ? 'categorie=' + activeCategory.slug + '&' : '' %><%= query ? 'q=' + query + '&' : '' %>tri=prix-desc" <%= tri === 'prix-desc' ? 'selected' : '' %>>Prix décroissant</option>
+            <option value="/boutique?<%= activeCategory ? 'categorie=' + activeCategory.slug + '&' : '' %><%= query ? 'q=' + query + '&' : '' %>tri=nom" <%= tri === 'nom' ? 'selected' : '' %>>Nom A-Z</option>
+          </select>
+        </div>
+
+        <% if (products.length === 0) { %>
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ccc" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <h3>Aucun produit trouvé</h3>
+          <p>Essayez de modifier vos critères de recherche.</p>
+          <a href="/boutique" class="btn btn-primary">Voir tous les produits</a>
+        </div>
+        <% } else { %>
+        <div class="products-grid">
+          <% products.forEach(product => { %>
+            <%- include('partials/product-card', { product }) %>
+          <% }); %>
+        </div>
+
+        <% if (totalPages > 1) { %>
+        <div class="pagination">
+          <% for (let p = 1; p <= totalPages; p++) { %>
+          <a href="/boutique?<%= activeCategory ? 'categorie=' + activeCategory.slug + '&' : '' %><%= query ? 'q=' + query + '&' : '' %><%= tri ? 'tri=' + tri + '&' : '' %>page=<%= p %>"
+             class="pagination-btn <%= p === currentPage ? 'active' : '' %>"><%= p %></a>
+          <% } %>
+        </div>
+        <% } %>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>

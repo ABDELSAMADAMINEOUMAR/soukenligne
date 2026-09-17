@@ -1,0 +1,86 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-grid-2">
+  <div class="admin-card">
+    <h3>Catégories</h3>
+    <table class="data-table">
+      <thead><tr><th>Nom</th><th>Produits</th><th>Statut</th><th>Actions</th></tr></thead>
+      <tbody>
+        <% categories.forEach(cat => { %>
+        <tr>
+          <td><strong><%= cat.name %></strong></td>
+          <td>
+            <% if (cat.product_count > 0) { %>
+              <a href="/admin/produits?categorie=<%= cat.id %>" class="btn btn-sm btn-outline" style="padding: 2px 8px; font-weight: bold;" title="Voir les produits"><%= cat.product_count %></a>
+            <% } else { %>
+              <span class="text-muted">0</span>
+            <% } %>
+          </td>
+          <td><span class="status-badge <%= cat.is_active ? 'status-confirmed' : 'status-cancelled' %>"><%= cat.is_active ? 'Active' : 'Inactive' %></span></td>
+          <td class="actions-cell" style="display: flex; gap: 0.5rem;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="editCategory('<%= cat.id %>', '<%= cat.name.replace(/'/g, "\\'") %>', '<%= (cat.description || '').replace(/'/g, "\\'") %>', <%= cat.is_active %>)">Éditer</button>
+            <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" onsubmit="return confirm('Désactiver cette catégorie ?')">
+              <button type="submit" class="btn btn-sm btn-danger">Désactiver</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-card">
+    <h3 id="form-title">Ajouter une catégorie</h3>
+    <form id="category-form" action="/admin/categories/ajouter" method="POST">
+      <div class="form-group">
+        <label>Nom *</label>
+        <input type="text" id="cat-name" name="name" required class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="cat-desc" name="description" rows="2" class="form-input"></textarea>
+      </div>
+      <div class="form-group" id="cat-status-group" style="display:none">
+        <label>Statut</label>
+        <select id="cat-status" name="is_active" class="form-input">
+          <option value="1">Active</option>
+          <option value="0">Inactive</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
+        <button type="submit" id="submit-btn" class="btn btn-primary">Ajouter</button>
+        <button type="button" id="cancel-btn" class="btn btn-outline" style="display:none" onclick="resetForm()">Annuler</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function resetForm() {
+  document.getElementById('form-title').textContent = 'Ajouter une catégorie';
+  const form = document.getElementById('category-form');
+  form.action = '/admin/categories/ajouter';
+  document.getElementById('cat-name').value = '';
+  document.getElementById('cat-desc').value = '';
+  document.getElementById('cat-status-group').style.display = 'none';
+  document.getElementById('submit-btn').textContent = 'Ajouter';
+  document.getElementById('cancel-btn').style.display = 'none';
+}
+
+function editCategory(id, name, desc, isActive) {
+  document.getElementById('form-title').textContent = 'Modifier la catégorie';
+  const form = document.getElementById('category-form');
+  form.action = '/admin/categories/modifier/' + id;
+  document.getElementById('cat-name').value = name;
+  document.getElementById('cat-desc').value = desc;
+  document.getElementById('cat-status-group').style.display = 'block';
+  document.getElementById('cat-status').value = isActive;
+  document.getElementById('submit-btn').textContent = 'Sauvegarder';
+  document.getElementById('cancel-btn').style.display = 'block';
+  
+  // scroll to the form smoothly
+  form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+
+<%- include('../partials/admin-footer') %>

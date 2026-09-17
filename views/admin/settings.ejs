@@ -1,0 +1,108 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-grid-2">
+  <div class="admin-card">
+    <h3>Paramètres de la boutique</h3>
+    <form action="/admin/parametres" method="POST">
+      <div class="form-group">
+        <label>Nom de la boutique</label>
+        <input type="text" name="store_name" class="form-input" value="<%= settings.store_name || '' %>">
+      </div>
+      <div class="form-group">
+        <label>Slogan</label>
+        <input type="text" name="store_tagline" class="form-input" value="<%= settings.store_tagline || '' %>">
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea name="store_description" rows="2" class="form-input"><%= settings.store_description || '' %></textarea>
+      </div>
+      <div class="form-group">
+        <label>Numéro WhatsApp (sans espaces, ex: 23566000000)</label>
+        <input type="text" name="whatsapp_number" class="form-input" value="<%= settings.whatsapp_number || '' %>">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="text" name="store_phone" class="form-input" value="<%= settings.store_phone || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="store_email" class="form-input" value="<%= settings.store_email || '' %>">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Adresse</label>
+        <input type="text" name="store_address" class="form-input" value="<%= settings.store_address || '' %>">
+      </div>
+      <div class="form-group">
+        <label>Frais de livraison par défaut (FCFA)</label>
+        <input type="number" name="default_delivery_fee" class="form-input" value="<%= settings.default_delivery_fee || 0 %>">
+      </div>
+
+      <details class="form-details">
+        <summary>Réseaux sociaux</summary>
+        <div class="form-group">
+          <label>Facebook URL</label>
+          <input type="url" name="facebook_url" class="form-input" value="<%= settings.facebook_url || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Instagram URL</label>
+          <input type="url" name="instagram_url" class="form-input" value="<%= settings.instagram_url || '' %>">
+        </div>
+        <div class="form-group">
+          <label>TikTok URL</label>
+          <input type="url" name="tiktok_url" class="form-input" value="<%= settings.tiktok_url || '' %>">
+        </div>
+      </details>
+
+      <details class="form-details">
+        <summary>SEO</summary>
+        <div class="form-group">
+          <label>Meta titre</label>
+          <input type="text" name="meta_title" class="form-input" value="<%= settings.meta_title || '' %>">
+        </div>
+        <div class="form-group">
+          <label>Meta description</label>
+          <textarea name="meta_description" rows="2" class="form-input"><%= settings.meta_description || '' %></textarea>
+        </div>
+      </details>
+
+      <button type="submit" class="btn btn-primary" style="margin-top:1rem">Enregistrer</button>
+    </form>
+  </div>
+
+  <div class="admin-card">
+    <h3>Zones de livraison</h3>
+    <table class="data-table">
+      <thead><tr><th>Zone</th><th>Frais</th><th></th></tr></thead>
+      <tbody>
+        <% zones.forEach(z => { %>
+        <tr>
+          <td><%= z.name %></td>
+          <td><%= formatPrice(z.fee) %></td>
+          <td>
+            <form action="/admin/zones/supprimer/<%= z.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer cette zone ?')">
+              <button type="submit" class="btn btn-sm btn-danger">×</button>
+            </form>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <h4 style="margin-top:1.5rem">Ajouter une zone</h4>
+    <form action="/admin/zones/ajouter" method="POST">
+      <div class="form-row">
+        <div class="form-group" style="flex:2">
+          <input type="text" name="name" placeholder="Nom de la zone" required class="form-input">
+        </div>
+        <div class="form-group">
+          <input type="number" name="fee" placeholder="Frais (FCFA)" required class="form-input" min="0">
+        </div>
+        <button type="submit" class="btn btn-primary" style="align-self:flex-end">Ajouter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<%- include('../partials/admin-footer') %>

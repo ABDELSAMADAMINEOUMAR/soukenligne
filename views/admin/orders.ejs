@@ -1,0 +1,50 @@
+<%- include('../partials/admin-header') %>
+
+<div class="admin-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+  <div class="filter-tabs">
+    <a href="/admin/commandes<%= locals.search ? '?search=' + locals.search : '' %>" class="filter-tab <%= !filterStatus ? 'active' : '' %>">Toutes</a>
+    <a href="/admin/commandes?status=pending<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'pending' ? 'active' : '' %>">En attente</a>
+    <a href="/admin/commandes?status=confirmed<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'confirmed' ? 'active' : '' %>">Confirmées</a>
+    <a href="/admin/commandes?status=preparing<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'preparing' ? 'active' : '' %>">En préparation</a>
+    <a href="/admin/commandes?status=out_for_delivery<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'out_for_delivery' ? 'active' : '' %>">En livraison</a>
+    <a href="/admin/commandes?status=delivered<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'delivered' ? 'active' : '' %>">Livrées</a>
+    <a href="/admin/commandes?status=cancelled<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'cancelled' ? 'active' : '' %>">Annulées</a>
+  </div>
+  <form action="/admin/commandes" method="GET" class="search-form" style="display: flex; gap: 0.5rem;">
+    <% if (filterStatus) { %>
+      <input type="hidden" name="status" value="<%= filterStatus %>">
+    <% } %>
+    <input type="text" name="search" placeholder="N° commande, nom ou tél..." value="<%= locals.search || '' %>" class="form-input" style="width: 250px;">
+    <button type="submit" class="btn btn-primary">Rechercher</button>
+    <% if (locals.search) { %>
+      <a href="/admin/commandes<%= filterStatus ? '?status=' + filterStatus : '' %>" class="btn btn-outline">Effacer</a>
+    <% } %>
+  </form>
+</div>
+
+<div class="admin-card">
+  <% if (orders.length === 0) { %>
+  <p class="text-muted">Aucune commande trouvée.</p>
+  <% } else { %>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>N°</th><th>Client</th><th>Tél.</th><th>Total</th><th>Statut</th><th>Date</th><th></th></tr></thead>
+      <tbody>
+        <% orders.forEach(o => { %>
+        <tr>
+          <td><strong><%= o.order_number %></strong></td>
+          <td><%= o.customer_name %></td>
+          <td><%= o.customer_phone || o.delivery_phone %></td>
+          <td><%= formatPrice(o.total) %></td>
+          <td><span class="status-badge <%= statusClass(o.status) %>"><%= statusLabel(o.status) %></span></td>
+          <td><%= new Date(o.created_at).toLocaleDateString('fr-FR') %></td>
+          <td><a href="/admin/commandes/<%= o.id %>" class="btn btn-sm btn-primary">Détails</a></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+</div>
+
+<%- include('../partials/admin-footer') %>
