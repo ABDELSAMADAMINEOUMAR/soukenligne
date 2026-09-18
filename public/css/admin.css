@@ -7,9 +7,9 @@
   width: 250px;
   background: var(--text);
   color: var(--white);
-  z-index: 200;
   overflow-y: auto;
   transition: transform .3s ease;
+  z-index: 100;
 }
 .admin-sidebar-header { padding: 1.25rem; border-bottom: 1px solid rgba(255,255,255,.1); }
 .admin-logo { display: flex; align-items: center; gap: .5rem; color: var(--white); font-weight: 700; font-size: 1rem; }

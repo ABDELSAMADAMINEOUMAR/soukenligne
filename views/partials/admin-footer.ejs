@@ -3,7 +3,22 @@
   <script>
     const menuBtn = document.getElementById('admin-menu-btn');
     const sidebar = document.getElementById('admin-sidebar');
-    if (menuBtn) menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+    const overlay = document.getElementById('admin-sidebar-overlay');
+
+    function toggleAdminSidebar() {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('open');
+      document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    }
+
+    if (menuBtn && sidebar && overlay) {
+      menuBtn.addEventListener('click', toggleAdminSidebar);
+      overlay.addEventListener('click', toggleAdminSidebar);
+      overlay.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        toggleAdminSidebar();
+      });
+    }
   </script>
 </body>
 </html>
