@@ -66,3 +66,52 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 });
+
+// Live Search
+let searchTimeout = null;
+window.handleLiveSearch = function(inputElement) {
+  const query = inputElement.value.trim();
+  const form = inputElement.closest('.search-form');
+  const resultsContainer = form.querySelector('.live-search-results');
+
+  if (query.length < 2) {
+    resultsContainer.style.display = 'none';
+    return;
+  }
+
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => {
+    fetch('/api/search?q=' + encodeURIComponent(query))
+      .then(r => r.json())
+      .then(products => {
+        if (products.length > 0) {
+          const html = products.map(p => `
+            <a href="/produit/${p.slug}" class="live-search-item">
+              <img src="${p.image || '/img/placeholder.jpg'}" alt="${p.name}" class="live-search-img">
+              <div class="live-search-info">
+                <div class="live-search-name">${p.name}</div>
+                <div class="live-search-price">
+                  ${p.discount_price ? `<span class="current-price">${p.discount_price} FCFA</span> <span class="old-price">${p.price} FCFA</span>` : `<span class="current-price">${p.price} FCFA</span>`}
+                </div>
+              </div>
+            </a>
+          `).join('');
+          resultsContainer.innerHTML = html;
+          resultsContainer.style.display = 'block';
+        } else {
+          resultsContainer.innerHTML = '<div class="live-search-empty">Aucun produit trouvé</div>';
+          resultsContainer.style.display = 'block';
+        }
+      })
+      .catch(() => {});
+  }, 300);
+};
+
+// Close live search when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.search-form')) {
+    document.querySelectorAll('.live-search-results').forEach(el => {
+      el.style.display = 'none';
+    });
+  }
+});

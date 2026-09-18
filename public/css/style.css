@@ -929,3 +929,73 @@ img { max-width: 100%; height: auto; display: block; }
   display: block;
   font-size: 1.05rem;
 }
+
+/* ========================================
+   LIVE SEARCH RESULTS
+   ======================================== */
+.live-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  z-index: 1000;
+  max-height: 350px;
+  overflow-y: auto;
+  display: none;
+  margin-top: 4px;
+}
+.live-search-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid var(--gray-100);
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.2s;
+}
+.live-search-item:last-child {
+  border-bottom: none;
+}
+.live-search-item:hover {
+  background: var(--gray-50);
+}
+.live-search-img {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 12px;
+}
+.live-search-info {
+  flex: 1;
+}
+.live-search-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live-search-price {
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+.live-search-price .old-price {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  font-weight: 400;
+  margin-left: 6px;
+  font-size: 0.75rem;
+}
+.live-search-empty {
+  padding: 15px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}

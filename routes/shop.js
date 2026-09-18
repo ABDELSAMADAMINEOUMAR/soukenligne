@@ -127,4 +127,24 @@ router.get('/categorie/:slug', (req, res) => {
   res.redirect(`/boutique?categorie=${req.params.slug}`);
 });
 
+// Live Search API
+router.get('/api/search', (req, res) => {
+  const db = getDb();
+  const query = req.query.q ? req.query.q.trim() : '';
+  
+  if (!query) return res.json([]);
+  
+  const results = db.prepare(`
+    SELECT p.id, p.slug, p.name, p.price, p.discount_price,
+      (SELECT image_path FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC, sort_order ASC LIMIT 1) as image
+    FROM products p
+    WHERE (p.name LIKE ? OR p.short_description LIKE ?) 
+      AND p.status = 'active' AND p.is_available = 1
+    ORDER BY p.updated_at DESC
+    LIMIT 5
+  `).all(`%${query}%`, `%${query}%`);
+  
+  res.json(results);
+});
+
 module.exports = router;
