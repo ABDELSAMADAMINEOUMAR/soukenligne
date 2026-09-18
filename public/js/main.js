@@ -7,15 +7,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const overlay = document.getElementById('mobile-sidebar-overlay');
   const closeBtn = document.getElementById('close-sidebar-btn');
 
-  function toggleSidebar() {
-    sidebar.classList.toggle('open');
-    overlay.classList.toggle('open');
+  function openSidebar() {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden'; // Prevent scrolling background
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+    document.body.style.overflow = '';
   }
 
   if (menuBtn && sidebar && overlay && closeBtn) {
-    menuBtn.addEventListener('click', toggleSidebar);
-    closeBtn.addEventListener('click', toggleSidebar);
-    overlay.addEventListener('click', toggleSidebar);
+    menuBtn.addEventListener('click', openSidebar);
+    closeBtn.addEventListener('click', closeSidebar);
+    overlay.addEventListener('click', closeSidebar);
+    // Added touchstart for better mobile responsiveness
+    overlay.addEventListener('touchstart', function(e) {
+      e.preventDefault(); // Prevent ghost clicks
+      closeSidebar();
+    });
   }
 
   // AJAX add to cart

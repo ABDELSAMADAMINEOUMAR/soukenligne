@@ -902,6 +902,8 @@ img { max-width: 100%; height: auto; display: block; }
   background: rgba(0,0,0,0.5);
   z-index: 1999;
   display: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 .mobile-sidebar-overlay.open {
   display: block;
