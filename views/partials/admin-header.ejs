@@ -111,6 +111,16 @@
   .notif-text { flex: 1; }
   .notif-text strong { display: block; font-size: 0.8125rem; color: #1e293b; }
   .notif-text span { font-size: 0.75rem; color: #64748b; }
+  
+  @media (max-width: 480px) {
+    #notif-dropdown {
+      position: fixed !important;
+      top: 70px !important;
+      right: 15px !important;
+      left: 15px !important;
+      width: auto !important;
+    }
+  }
 </style>
 
 <script>
