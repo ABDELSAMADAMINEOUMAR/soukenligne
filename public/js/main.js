@@ -1,13 +1,21 @@
 // SoukEnLigne — Frontend JavaScript
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Mobile menu
+  // Mobile sidebar menu
   const menuBtn = document.getElementById('mobile-menu-btn');
-  const catNav = document.getElementById('category-nav');
-  if (menuBtn && catNav) {
-    menuBtn.addEventListener('click', () => {
-      catNav.style.display = catNav.style.display === 'none' ? 'block' : 'none';
-    });
+  const sidebar = document.getElementById('mobile-sidebar');
+  const overlay = document.getElementById('mobile-sidebar-overlay');
+  const closeBtn = document.getElementById('close-sidebar-btn');
+
+  function toggleSidebar() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+  }
+
+  if (menuBtn && sidebar && overlay && closeBtn) {
+    menuBtn.addEventListener('click', toggleSidebar);
+    closeBtn.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
   }
 
   // AJAX add to cart

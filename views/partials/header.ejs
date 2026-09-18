@@ -98,4 +98,24 @@
     </nav>
   </header>
 
+  <!-- Mobile Sidebar Menu -->
+  <div class="mobile-sidebar-overlay" id="mobile-sidebar-overlay"></div>
+  <div class="mobile-sidebar" id="mobile-sidebar">
+    <div class="mobile-sidebar-header">
+      <h3 style="margin: 0; font-size: 1.2rem; color: var(--primary);">Menu</h3>
+      <button class="close-sidebar-btn" id="close-sidebar-btn" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+    </div>
+    <ul class="mobile-sidebar-links">
+      <li><a href="/">🏠 Accueil</a></li>
+      <li><a href="/boutique">🛍️ Tout voir</a></li>
+      <li style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; font-size: 0.85rem; color: #666; text-transform: uppercase;">Catégories</li>
+      <% categories.forEach(cat => { %>
+        <li><a href="/boutique?categorie=<%= cat.slug %>"><%= cat.name %></a></li>
+      <% }); %>
+      <li style="margin-top: 1rem; border-top: 1px solid #eee; padding-top: 1rem; font-size: 0.85rem; color: #666; text-transform: uppercase;">Mon Compte</li>
+      <li><a href="/compte">👤 Profil</a></li>
+      <li><a href="/panier">🛒 Mon Panier (<%= cartCount %>)</a></li>
+    </ul>
+  </div>
+
   <main class="main-content">
