@@ -13,13 +13,19 @@ function generateOrderNumber() {
   return `${prefix}${yr}${mo}-${rand}`;
 }
 
-// Checkout page — requires login
-router.get('/', requireAuth, (req, res) => {
+// Checkout page — allows guests and logged-in users
+router.get('/', (req, res) => {
   if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
   
   const db = getDb();
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
-  const defaultAddr = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC LIMIT 1').get(req.session.userId);
+  let user = null;
+  let defaultAddr = null;
+  
+  if (req.session.userId) {
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.session.userId);
+    defaultAddr = db.prepare('SELECT * FROM addresses WHERE user_id = ? ORDER BY is_default DESC LIMIT 1').get(req.session.userId);
+  }
+  
   const zones = db.prepare('SELECT * FROM delivery_zones WHERE is_active = 1 ORDER BY fee ASC').all();
   const settings = getSettings();
   const defaultFee = parseInt(settings.default_delivery_fee) || 0;
@@ -33,7 +39,7 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // Place order
-router.post('/confirmer', requireAuth, (req, res) => {
+router.post('/confirmer', (req, res) => {
   if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
   
   const db = getDb();
@@ -81,30 +87,40 @@ router.post('/confirmer', requireAuth, (req, res) => {
 
   const updateStock = db.prepare('UPDATE products SET stock_quantity = stock_quantity - ? WHERE id = ?');
 
-  const transaction = db.transaction(() => {
-    const result = insertOrder.run(
-      orderNumber, req.session.userId, subtotal, deliveryFee, total,
-      delivery_full_name, delivery_phone, finalCity, delivery_neighborhood,
-      delivery_address, delivery_landmark || null, delivery_notes || null
-    );
-    const orderId = result.lastInsertRowid;
-
-    for (const item of cartItems) {
-      insertItem.run(orderId, item.product.id, item.product.name, item.price, item.quantity, item.price * item.quantity);
-      updateStock.run(item.quantity, item.product.id);
-    }
-
-    // Save address
-    const addrExists = db.prepare('SELECT id FROM addresses WHERE user_id = ?').get(req.session.userId);
-    if (!addrExists) {
-      db.prepare(`INSERT INTO addresses (user_id, full_name, phone, city, neighborhood, address_line, landmark, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`)
-        .run(req.session.userId, delivery_full_name, delivery_phone, finalCity, delivery_neighborhood, delivery_address, delivery_landmark || null);
-    }
-
-    return orderNumber;
-  });
-
   try {
+    const transaction = db.transaction(() => {
+      let finalUserId = req.session.userId;
+      if (!finalUserId) {
+        const guestEmail = 'guest_' + Date.now() + '@soukenligne.td';
+        const guestUser = db.prepare("INSERT INTO users (full_name, email, phone, password_hash, role) VALUES (?, ?, ?, ?, 'guest')")
+          .run(delivery_full_name, guestEmail, delivery_phone, 'GUEST_NO_LOGIN');
+        finalUserId = guestUser.lastInsertRowid;
+        req.session.userId = finalUserId;
+        req.session.userRole = 'guest';
+      }
+
+      const result = insertOrder.run(
+        orderNumber, finalUserId, subtotal, deliveryFee, total,
+        delivery_full_name, delivery_phone, finalCity, delivery_neighborhood,
+        delivery_address, delivery_landmark || null, delivery_notes || null
+      );
+      const orderId = result.lastInsertRowid;
+
+      for (const item of cartItems) {
+        insertItem.run(orderId, item.product.id, item.product.name, item.price, item.quantity, item.price * item.quantity);
+        updateStock.run(item.quantity, item.product.id);
+      }
+
+      // Save address
+      const addrExists = db.prepare('SELECT id FROM addresses WHERE user_id = ?').get(finalUserId);
+      if (!addrExists) {
+        db.prepare(`INSERT INTO addresses (user_id, full_name, phone, city, neighborhood, address_line, landmark, is_default) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`)
+          .run(finalUserId, delivery_full_name, delivery_phone, finalCity, delivery_neighborhood, delivery_address, delivery_landmark || null);
+      }
+
+      return orderNumber;
+    });
+
     const num = transaction();
     req.session.cart = [];
     res.redirect(`/commande/confirmation/${num}`);

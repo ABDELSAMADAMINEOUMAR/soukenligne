@@ -17,14 +17,14 @@
             <div class="form-group">
               <label for="delivery_full_name">Nom complet *</label>
               <input type="text" id="delivery_full_name" name="delivery_full_name" required
-                value="<%= defaultAddr ? defaultAddr.full_name : user.full_name %>" class="form-input">
+                value="<%= defaultAddr ? defaultAddr.full_name : (user ? user.full_name : '') %>" class="form-input">
             </div>
 
             <div class="form-row">
               <div class="form-group">
                 <label for="delivery_phone">Téléphone *</label>
                 <input type="tel" id="delivery_phone" name="delivery_phone" required
-                  value="<%= defaultAddr ? defaultAddr.phone : (user.phone || '') %>" class="form-input" placeholder="+235 ...">
+                  value="<%= defaultAddr ? defaultAddr.phone : (user ? (user.phone || '') : '') %>" class="form-input" placeholder="+235 ...">
               </div>
               <div class="form-group">
                 <label for="delivery-zone-select">Ville / Zone *</label>
