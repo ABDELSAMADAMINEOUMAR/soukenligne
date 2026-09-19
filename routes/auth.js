@@ -141,7 +141,7 @@ router.post('/commande/:orderNumber/annuler', requireAuth, async (req, res) => {
     const itemsRes = await db.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [order.id]);
     
     await db.query('BEGIN');
-    await db.query('UPDATE orders SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['cancelled', order.id]);
+    await db.query('UPDATE orders SET status = $1, admin_seen_cancellation = false, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['cancelled', order.id]);
     for (const item of itemsRes.rows) {
       await db.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
     }

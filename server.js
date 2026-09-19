@@ -64,13 +64,16 @@ async function start() {
   // Seed if empty
   const db = getDb();
   try {
+    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_notes TEXT');
+    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_seen_cancellation BOOLEAN DEFAULT false');
+    
     const productCountRes = await db.query('SELECT COUNT(*) as c FROM products');
     if (parseInt(productCountRes.rows[0].c) === 0) {
       const { runSeed } = require('./db/seed');
       await runSeed();
     }
   } catch (err) {
-    console.error('Error checking seed data:', err);
+    console.error('Error checking seed data or altering tables:', err);
   }
 
   app.listen(PORT, () => {

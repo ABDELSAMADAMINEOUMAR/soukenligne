@@ -358,7 +358,7 @@ router.post('/commandes/:id/statut', async (req, res) => {
   try {
     const { status, admin_notes } = req.body;
     const db = getDb();
-    await db.query('UPDATE orders SET status = $1, delivery_notes = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+    await db.query('UPDATE orders SET status = $1, delivery_notes = $2, admin_seen_cancellation = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
       [status, admin_notes || null, parseInt(req.params.id, 10)]);
     res.redirect(`/admin/commandes/${req.params.id}`);
   } catch (err) {
@@ -436,13 +436,13 @@ router.post('/zones/supprimer/:id', async (req, res) => {
 router.get('/api/notifications', async (req, res) => {
   try {
     const db = getDb();
-    const pendRes = await db.query("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'");
+    const pendRes = await db.query("SELECT COUNT(*) as c FROM orders WHERE status = 'pending' OR (status = 'cancelled' AND admin_seen_cancellation = false)");
     const pending = parseInt(pendRes.rows[0].c);
     
     const recentRes = await db.query(`
-      SELECT o.order_number, u.full_name as customer_name, o.total, o.id
+      SELECT o.order_number, o.status, u.full_name as customer_name, o.total, o.id
       FROM orders o LEFT JOIN users u ON o.user_id = u.id
-      WHERE o.status = 'pending'
+      WHERE o.status = 'pending' OR (o.status = 'cancelled' AND o.admin_seen_cancellation = false)
       ORDER BY o.created_at DESC LIMIT 5
     `);
     res.json({ pendingCount: pending, recentPending: recentRes.rows });

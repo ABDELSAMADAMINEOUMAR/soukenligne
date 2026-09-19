@@ -167,15 +167,20 @@
 
         // Build dropdown list
         if (data.recentPending.length > 0) {
-          list.innerHTML = data.recentPending.map(o =>
-            '<a class="notif-item" href="/admin/commandes/' + o.id + '">' +
-              '<div class="notif-icon">📦</div>' +
+          list.innerHTML = data.recentPending.map(o => {
+            const isCancelled = o.status === 'cancelled';
+            const icon = isCancelled ? '❌' : '📦';
+            const bgClass = isCancelled ? 'background: #fee2e2;' : 'background: #fef3c7;';
+            const titleColor = isCancelled ? 'color: #ef4444;' : 'color: #1e293b;';
+            const statusLabel = isCancelled ? ' (Annulée par client)' : '';
+            return '<a class="notif-item" href="/admin/commandes/' + o.id + '">' +
+              '<div class="notif-icon" style="' + bgClass + '">' + icon + '</div>' +
               '<div class="notif-text">' +
-                '<strong>' + o.order_number + '</strong>' +
+                '<strong style="' + titleColor + '">' + o.order_number + statusLabel + '</strong>' +
                 '<span>' + (o.customer_name || 'Client') + ' — ' + formatPrice(o.total) + '</span>' +
               '</div>' +
-            '</a>'
-          ).join('');
+            '</a>';
+          }).join('');
         } else {
           list.innerHTML = '<p style="padding: 1.5rem; text-align: center; color: #94a3b8; font-size: 0.875rem;">Aucune commande en attente ✓</p>';
         }
