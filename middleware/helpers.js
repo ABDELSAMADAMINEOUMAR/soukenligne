@@ -1,15 +1,19 @@
 const { getSettings, getDb } = require('../db/init');
 
-function loadHelpers(req, res, next) {
-  const settings = getSettings();
-  res.locals.settings = settings;
-  res.locals.storeName = settings.store_name || 'SoukEnLigne';
-  res.locals.whatsappNumber = settings.whatsapp_number || '';
-  res.locals.currency = settings.currency || 'FCFA';
-
+async function loadHelpers(req, res, next) {
   try {
-    res.locals.categories = getDb().prepare('SELECT name, slug FROM categories WHERE is_active = 1 ORDER BY sort_order ASC').all();
+    const settings = await getSettings();
+    res.locals.settings = settings;
+    res.locals.storeName = settings.store_name || 'SoukEnLigne';
+    res.locals.whatsappNumber = settings.whatsapp_number || '';
+    res.locals.currency = settings.currency || 'FCFA';
+
+    const db = getDb();
+    const catRes = await db.query('SELECT name, slug FROM categories WHERE is_active = true ORDER BY sort_order ASC');
+    res.locals.categories = catRes.rows;
   } catch (e) {
+    console.error(e);
+    res.locals.settings = {};
     res.locals.categories = [];
   }
 

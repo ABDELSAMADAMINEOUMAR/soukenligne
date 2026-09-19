@@ -3,10 +3,15 @@ const router = express.Router();
 const { getDb } = require('../db/init');
 
 // View cart
-router.get('/', (req, res) => {
-  const db = getDb();
-  const zones = db.prepare('SELECT * FROM delivery_zones WHERE is_active = 1 ORDER BY fee ASC').all();
-  res.render('cart', { zones, pageTitle: 'Mon panier' });
+router.get('/', async (req, res) => {
+  try {
+    const db = getDb();
+    const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
+    res.render('cart', { zones: zonesRes.rows, pageTitle: 'Mon panier' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
 });
 
 // Add to cart

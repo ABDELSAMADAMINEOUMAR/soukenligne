@@ -5,7 +5,7 @@ function makeSlug(text) {
   return slugify(text, { lower: true, strict: true });
 }
 
-function runSeed() {
+async function runSeed() {
   const db = getDb();
 
   // Seed categories
@@ -21,17 +21,20 @@ function runSeed() {
   ];
 
   for (const cat of categories) {
-    db.prepare('INSERT OR IGNORE INTO categories (name, slug, description, sort_order) VALUES (?, ?, ?, ?)').run(cat.name, makeSlug(cat.name), cat.description, cat.sort_order);
+    await db.query(
+      'INSERT INTO categories (name, slug, description, sort_order) VALUES ($1, $2, $3, $4) ON CONFLICT (slug) DO NOTHING', 
+      [cat.name, makeSlug(cat.name), cat.description, cat.sort_order]
+    );
   }
 
   // Seed products
   const products = [
-    { name: 'Samsung Galaxy A15', description: "Le Samsung Galaxy A15 offre un écran Super AMOLED de 6.5 pouces, un processeur performant, 128 Go de stockage et un appareil photo triple 50 MP. Batterie longue durée de 5000 mAh. Idéal pour un usage quotidien.", short_description: 'Smartphone 128 Go, écran Super AMOLED 6.5"', price: 75000, discount_price: 69000, category_id: 1, brand: 'Samsung', stock_quantity: 25, is_featured: 1 },
-    { name: 'iPhone 13', description: "L'iPhone 13 avec son écran Super Retina XDR de 6.1 pouces, puce A15 Bionic ultra-rapide, double caméra 12 MP avec mode Cinématique. Design en aluminium et verre Ceramic Shield.", short_description: 'Smartphone Apple 128 Go, écran 6.1"', price: 350000, category_id: 1, brand: 'Apple', stock_quantity: 10, is_featured: 1 },
-    { name: 'Tecno Spark 20 Pro+', description: "Le Tecno Spark 20 Pro+ avec écran 6.78 pouces FHD+, 256 Go de stockage, appareil photo 108 MP, charge rapide 33W et batterie 5000 mAh. Un excellent rapport qualité-prix.", short_description: 'Smartphone 256 Go, caméra 108 MP', price: 95000, discount_price: 85000, category_id: 1, brand: 'Tecno', stock_quantity: 30, is_featured: 1 },
-    { name: 'Ordinateur Portable HP 15', description: "PC portable HP 15 pouces avec processeur Intel Core i5, 8 Go de RAM, 256 Go SSD. Écran antireflet HD, Windows 11. Parfait pour le travail et les études.", short_description: 'PC portable Intel i5, 8 Go RAM, 256 Go SSD', price: 280000, category_id: 2, brand: 'HP', stock_quantity: 8, is_featured: 1 },
+    { name: 'Samsung Galaxy A15', description: "Le Samsung Galaxy A15 offre un écran Super AMOLED de 6.5 pouces, un processeur performant, 128 Go de stockage et un appareil photo triple 50 MP. Batterie longue durée de 5000 mAh. Idéal pour un usage quotidien.", short_description: 'Smartphone 128 Go, écran Super AMOLED 6.5"', price: 75000, discount_price: 69000, category_id: 1, brand: 'Samsung', stock_quantity: 25, is_featured: true },
+    { name: 'iPhone 13', description: "L'iPhone 13 avec son écran Super Retina XDR de 6.1 pouces, puce A15 Bionic ultra-rapide, double caméra 12 MP avec mode Cinématique. Design en aluminium et verre Ceramic Shield.", short_description: 'Smartphone Apple 128 Go, écran 6.1"', price: 350000, category_id: 1, brand: 'Apple', stock_quantity: 10, is_featured: true },
+    { name: 'Tecno Spark 20 Pro+', description: "Le Tecno Spark 20 Pro+ avec écran 6.78 pouces FHD+, 256 Go de stockage, appareil photo 108 MP, charge rapide 33W et batterie 5000 mAh. Un excellent rapport qualité-prix.", short_description: 'Smartphone 256 Go, caméra 108 MP', price: 95000, discount_price: 85000, category_id: 1, brand: 'Tecno', stock_quantity: 30, is_featured: true },
+    { name: 'Ordinateur Portable HP 15', description: "PC portable HP 15 pouces avec processeur Intel Core i5, 8 Go de RAM, 256 Go SSD. Écran antireflet HD, Windows 11. Parfait pour le travail et les études.", short_description: 'PC portable Intel i5, 8 Go RAM, 256 Go SSD', price: 280000, category_id: 2, brand: 'HP', stock_quantity: 8, is_featured: true },
     { name: 'Imprimante HP DeskJet 2710', description: "Imprimante tout-en-un HP DeskJet 2710 : impression, numérisation, copie. Connexion Wi-Fi, impression mobile. Compacte et facile à utiliser.", short_description: 'Imprimante tout-en-un Wi-Fi', price: 45000, category_id: 2, brand: 'HP', stock_quantity: 15 },
-    { name: 'Téléviseur Samsung 43 Smart TV', description: "Smart TV Samsung 43 pouces Full HD, système Tizen, Netflix, YouTube intégrés. Qualité d'image exceptionnelle avec PurColor. Son Dolby Digital Plus.", short_description: 'Smart TV 43" Full HD', price: 195000, discount_price: 175000, category_id: 3, brand: 'Samsung', stock_quantity: 5, is_featured: 1 },
+    { name: 'Téléviseur Samsung 43 Smart TV', description: "Smart TV Samsung 43 pouces Full HD, système Tizen, Netflix, YouTube intégrés. Qualité d'image exceptionnelle avec PurColor. Son Dolby Digital Plus.", short_description: 'Smart TV 43" Full HD', price: 195000, discount_price: 175000, category_id: 3, brand: 'Samsung', stock_quantity: 5, is_featured: true },
     { name: 'Écouteurs Bluetooth JBL Tune 510BT', description: "Écouteurs sans fil JBL Tune 510BT avec son JBL Pure Bass, autonomie de 40 heures, connexion Bluetooth 5.0, pliables et légers.", short_description: 'Écouteurs sans fil, 40h autonomie', price: 25000, category_id: 3, brand: 'JBL', stock_quantity: 40 },
     { name: 'Réfrigérateur Hisense 120L', description: "Réfrigérateur Hisense 120 litres, classe énergétique A+, faible consommation, silencieux. Compact et idéal pour les petits espaces.", short_description: 'Réfrigérateur compact 120L, classe A+', price: 135000, category_id: 4, brand: 'Hisense', stock_quantity: 7 },
     { name: 'Ventilateur sur pied 18 pouces', description: "Ventilateur oscillant sur pied 18 pouces, 3 vitesses, silencieux et puissant. Hauteur réglable. Idéal pour le climat tchadien.", short_description: 'Ventilateur oscillant 3 vitesses', price: 18000, discount_price: 15000, category_id: 4, stock_quantity: 50 },
@@ -41,8 +44,9 @@ function runSeed() {
   ];
 
   for (const p of products) {
-    db.prepare('INSERT OR IGNORE INTO products (name, slug, description, short_description, price, discount_price, category_id, brand, stock_quantity, is_featured, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(
-      p.name, makeSlug(p.name), p.description, p.short_description, p.price, p.discount_price || null, p.category_id, p.brand || null, p.stock_quantity, p.is_featured || 0, 'active'
+    await db.query(
+      'INSERT INTO products (name, slug, description, short_description, price, discount_price, category_id, brand, stock_quantity, is_featured, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (slug) DO NOTHING',
+      [p.name, makeSlug(p.name), p.description, p.short_description, p.price, p.discount_price || null, p.category_id, p.brand || null, p.stock_quantity, p.is_featured || false, 'active']
     );
   }
 
@@ -57,7 +61,7 @@ function runSeed() {
   ];
 
   for (const z of zones) {
-    db.prepare('INSERT OR IGNORE INTO delivery_zones (name, fee) VALUES (?, ?)').run(z.name, z.fee);
+    await db.query('INSERT INTO delivery_zones (name, fee) VALUES ($1, $2) ON CONFLICT (name) DO NOTHING', [z.name, z.fee]);
   }
 
   console.log('✅ Base de données initialisée avec les données de démonstration.');

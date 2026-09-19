@@ -63,10 +63,14 @@ async function start() {
 
   // Seed if empty
   const db = getDb();
-  const productCount = db.prepare('SELECT COUNT(*) as c FROM products').get();
-  if (productCount.c === 0) {
-    const { runSeed } = require('./db/seed');
-    runSeed();
+  try {
+    const productCountRes = await db.query('SELECT COUNT(*) as c FROM products');
+    if (parseInt(productCountRes.rows[0].c) === 0) {
+      const { runSeed } = require('./db/seed');
+      await runSeed();
+    }
+  } catch (err) {
+    console.error('Error checking seed data:', err);
   }
 
   app.listen(PORT, () => {
