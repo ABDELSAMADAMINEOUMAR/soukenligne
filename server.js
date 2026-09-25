@@ -80,6 +80,9 @@ async function start() {
 
     // Migrate old admin email
     await db.query("UPDATE users SET email = 'admin@barontechnology.td', phone = '+23566731494' WHERE email = 'admin@soukenligne.td' AND role = 'admin'");
+    
+    // Migrate existing guest emails
+    await db.query("UPDATE users SET email = REPLACE(email, '@soukenligne.td', '@barontechnology.td') WHERE email LIKE 'guest_%@soukenligne.td'");
 
     const productCountRes = await db.query('SELECT COUNT(*) as c FROM products');
     if (parseInt(productCountRes.rows[0].c) === 0) {

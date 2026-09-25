@@ -89,7 +89,7 @@ router.post('/confirmer', async (req, res) => {
 
     let finalUserId = req.session.userId;
     if (!finalUserId) {
-      const guestEmail = 'guest_' + Date.now() + '@soukenligne.td';
+      const guestEmail = 'guest_' + Date.now() + '@barontechnology.td';
       const guestRes = await db.query(
         "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, 'guest') RETURNING id",
         [delivery_full_name, guestEmail, delivery_phone, 'GUEST_NO_LOGIN']
