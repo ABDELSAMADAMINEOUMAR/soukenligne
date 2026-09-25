@@ -112,8 +112,21 @@ img { max-width: 100%; height: auto; display: block; }
   width: 24px;
   height: 24px;
 }
-.logo-text { letter-spacing: .05em; text-transform: uppercase; font-size: 1.1rem; }
-.logo-accent { color: var(--text-muted); font-weight: 500; margin-left: .15rem; font-size: .85em; letter-spacing: .08em; }
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-size: 1.1rem;
+}
+.logo-accent {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: .55em;
+  letter-spacing: .15em;
+  margin-top: .05rem;
+}
 
 .search-bar { flex: 1; max-width: 500px; }
 .search-form { display: flex; position: relative; }
@@ -157,7 +170,7 @@ img { max-width: 100%; height: auto; display: block; }
   position: absolute;
   top: -5px;
   right: -8px;
-  background: var(--primary);
+  background: var(--danger);
   color: var(--white);
   font-size: .65rem;
   font-weight: 700;
@@ -377,7 +390,7 @@ img { max-width: 100%; height: auto; display: block; }
   position: absolute;
   top: .5rem;
   left: .5rem;
-  background: var(--primary);
+  background: var(--danger);
   color: var(--white);
   font-size: .7rem;
   font-weight: 700;
