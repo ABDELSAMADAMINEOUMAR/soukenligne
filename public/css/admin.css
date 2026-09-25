@@ -59,9 +59,9 @@
   padding: 1.25rem;
   text-align: center;
 }
-.stat-highlight { border-color: var(--accent); background: #FFF8ED; }
+.stat-highlight { border-color: var(--primary); background: var(--gray-50); border-width: 2px; }
 .stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
-.stat-highlight .stat-value { color: var(--accent-dark); }
+.stat-highlight .stat-value { color: var(--primary); }
 .stat-label { font-size: .78rem; color: var(--text-muted); margin-top: .15rem; text-transform: uppercase; letter-spacing: .03em; }
 
 .admin-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
