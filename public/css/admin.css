@@ -12,9 +12,9 @@
   z-index: 100;
 }
 .admin-sidebar-header { padding: 1.25rem; border-bottom: 1px solid rgba(255,255,255,.1); }
-.admin-logo { display: flex; align-items: center; gap: .5rem; color: var(--white); font-weight: 700; font-size: 1rem; }
-.admin-logo:hover { color: var(--white); }
-.admin-logo .logo-icon { width: 30px; height: 30px; font-size: .9rem; }
+.admin-logo { display: block; }
+.admin-logo:hover { opacity: .9; }
+.admin-logo-img { height: 35px; width: auto; object-fit: contain; }
 
 .admin-nav { padding: .75rem 0; }
 .admin-nav-link {

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= pageTitle %> — Admin Baron Technology</title>
+  <link rel="icon" href="/images/baron-technology-icon.jpg" type="image/jpeg">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,15 +16,7 @@
   <aside class="admin-sidebar" id="admin-sidebar">
     <div class="admin-sidebar-header">
       <a href="/admin" class="admin-logo">
-        <span class="logo-icon">
-          <svg viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
-            <path d="M14 7h10c5 0 8.5 2 8.5 6.5 0 3.2-2 5-4.5 5.8 3 .8 5.5 3 5.5 7 0 5-4 7.7-9.5 7.7H14V7z" fill="white"/>
-            <path d="M19.5 11.5v6h4.5c3 0 4.5-1.2 4.5-3s-1.5-3-4.5-3h-4.5zM19.5 22v7h5c3.5 0 5-1.5 5-3.5s-1.5-3.5-5-3.5h-5z" fill="#1A1A1A"/>
-            <ellipse cx="26" cy="14" rx="16" ry="5" stroke="white" stroke-width="2" fill="none" transform="rotate(-25 26 14)"/>
-            <ellipse cx="27" cy="16" rx="12" ry="3.5" stroke="white" stroke-width="1.2" fill="none" transform="rotate(-25 27 16)" opacity="0.6"/>
-          </svg>
-        </span>
-        <span>BARON TECHNOLOGY</span>
+        <img src="/images/baron-technology-logo-white.jpg" alt="Baron Technology" class="admin-logo-img">
       </a>
     </div>
     <nav class="admin-nav">
@@ -166,7 +159,7 @@
           if (Notification.permission === 'granted') {
             new Notification('🛒 Nouvelle commande !', {
               body: 'Vous avez ' + data.pendingCount + ' commande(s) en attente.',
-              icon: '/favicon.ico'
+              icon: '/images/baron-technology-icon.jpg'
             });
           }
         }
