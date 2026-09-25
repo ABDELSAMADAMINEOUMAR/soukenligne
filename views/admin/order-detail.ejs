@@ -47,7 +47,7 @@
       <% if (order.customer_whatsapp || order.delivery_phone) { %>
       <%
         const waNum = order.customer_whatsapp || order.delivery_phone;
-        const waMsg = `Bonjour ${order.delivery_full_name}, votre commande ${order.order_number} sur SoukEnLigne est en cours de traitement. Total : ${formatPrice(order.total)}`;
+        const waMsg = `Bonjour ${order.delivery_full_name}, votre commande ${order.order_number} sur Baron Technology est en cours de traitement. Total : ${formatPrice(order.total)}`;
       %>
       <a href="<%= whatsappLink(waNum, waMsg) %>" target="_blank" class="btn btn-wa btn-block" style="margin-top:1rem">
         Contacter le client sur WhatsApp

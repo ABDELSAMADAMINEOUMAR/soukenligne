@@ -4,7 +4,7 @@ async function loadHelpers(req, res, next) {
   try {
     const settings = await getSettings();
     res.locals.settings = settings;
-    res.locals.storeName = settings.store_name || 'SoukEnLigne';
+    res.locals.storeName = settings.store_name || 'Baron Technology';
     res.locals.whatsappNumber = settings.whatsapp_number || '';
     res.locals.currency = settings.currency || 'FCFA';
 

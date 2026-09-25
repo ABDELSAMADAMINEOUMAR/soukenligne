@@ -1,4 +1,4 @@
-// SoukEnLigne — Frontend JavaScript
+// Baron Technology — Frontend JavaScript
 
 document.addEventListener('DOMContentLoaded', () => {
   // Mobile sidebar menu

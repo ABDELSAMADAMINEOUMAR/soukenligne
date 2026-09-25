@@ -141,7 +141,7 @@ router.get('/produit/:slug', async (req, res) => {
     res.render('product', {
       product, images, related,
       pageTitle: product.name,
-      metaTitle: product.meta_title || product.name + ' — SoukEnLigne',
+      metaTitle: product.meta_title || product.name + ' — Baron Technology',
       metaDescription: product.meta_description || product.short_description || '',
       ogImage: images.length > 0 ? images[0].image_path : ''
     });

@@ -43,7 +43,7 @@
       <div class="confirmation-actions">
         <a href="/compte" class="btn btn-outline">Voir mes commandes</a>
         <%
-          const waMsg = `Bonjour, je viens de passer la commande ${order.order_number} sur SoukEnLigne.\n\nTotal : ${formatPrice(order.total)}\n\nJe voudrais confirmer les détails de livraison.`;
+          const waMsg = `Bonjour, je viens de passer la commande ${order.order_number} sur Baron Technology.\n\nTotal : ${formatPrice(order.total)}\n\nJe voudrais confirmer les détails de livraison.`;
         %>
         <a href="<%= whatsappLink(whatsappNumber, waMsg) %>" target="_blank" class="btn btn-wa">
           Confirmer sur WhatsApp

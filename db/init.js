@@ -189,21 +189,21 @@ async function initTables() {
 
   // Default settings
   const defaultSettings = {
-    store_name: 'SoukEnLigne',
-    store_tagline: 'Votre marché en ligne au Tchad',
-    store_description: 'La première plateforme e-commerce du Tchad. Achetez en ligne, payez à la livraison.',
-    whatsapp_number: '23566000000',
-    store_phone: '+235 66 00 00 00',
-    store_email: 'contact@soukenligne.td',
-    store_address: "N'Djaména, Tchad",
+    store_name: 'Baron Technology',
+    store_tagline: 'Votre satisfaction est notre priorité',
+    store_description: 'Baron Technology — Votre satisfaction est notre priorité. Achetez en ligne, payez à la livraison.',
+    whatsapp_number: '23566731494',
+    store_phone: '+235 66 73 14 94',
+    store_email: 'barontechnologyltd@gmail.com',
+    store_address: 'Dinguessou, Autour du rond point Pence',
     currency: 'FCFA',
     currency_code: 'XAF',
     default_delivery_fee: '1500',
-    meta_title: 'SoukEnLigne — Achetez en ligne au Tchad',
-    meta_description: 'SoukEnLigne est la plateforme e-commerce du Tchad. Découvrez nos produits, commandez en ligne et payez à la livraison.',
-    facebook_url: '',
-    instagram_url: '',
-    tiktok_url: ''
+    meta_title: 'Baron Technology — Votre satisfaction est notre priorité',
+    meta_description: 'Baron Technology est votre boutique en ligne au Tchad. Découvrez nos produits, commandez en ligne et payez à la livraison.',
+    facebook_url: 'https://facebook.com/barontechnologyltd',
+    instagram_url: 'https://instagram.com/barontechnologyltd',
+    tiktok_url: 'https://tiktok.com/@barontechnologyltd'
   };
 
   for (const [key, value] of Object.entries(defaultSettings)) {
