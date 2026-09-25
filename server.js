@@ -78,6 +78,9 @@ async function start() {
     await db.query("UPDATE settings SET value = 'Baron Technology — Votre satisfaction est notre priorité' WHERE key = 'meta_title' AND value LIKE '%SoukEnLigne%'");
     await db.query("UPDATE settings SET value = 'Baron Technology est votre boutique en ligne au Tchad. Découvrez nos produits, commandez en ligne et payez à la livraison.' WHERE key = 'meta_description' AND value LIKE '%SoukEnLigne%'");
 
+    // Migrate old admin email
+    await db.query("UPDATE users SET email = 'admin@barontechnology.td', phone = '+23566731494' WHERE email = 'admin@soukenligne.td' AND role = 'admin'");
+
     const productCountRes = await db.query('SELECT COUNT(*) as c FROM products');
     if (parseInt(productCountRes.rows[0].c) === 0) {
       const { runSeed } = require('./db/seed');

@@ -215,7 +215,7 @@ async function initTables() {
   if (adminRes.rows.length === 0) {
     const hash = bcrypt.hashSync('admin123', 10);
     await db.query('INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5)', [
-      'Administrateur', 'admin@soukenligne.td', '+23566000000', hash, 'admin'
+      'Administrateur', 'admin@barontechnology.td', '+23566731494', hash, 'admin'
     ]);
   }
 }
