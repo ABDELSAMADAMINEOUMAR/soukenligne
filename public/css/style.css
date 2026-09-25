@@ -112,8 +112,8 @@ img { max-width: 100%; height: auto; display: block; }
   width: 24px;
   height: 24px;
 }
-.logo-text { letter-spacing: -.02em; }
-.logo-accent { color: var(--text-muted); font-weight: 600; }
+.logo-text { letter-spacing: .05em; text-transform: uppercase; font-size: 1.1rem; }
+.logo-accent { color: var(--text-muted); font-weight: 500; margin-left: .15rem; font-size: .85em; letter-spacing: .08em; }
 
 .search-bar { flex: 1; max-width: 500px; }
 .search-form { display: flex; position: relative; }
