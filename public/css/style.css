@@ -63,8 +63,8 @@ img { max-width: 100%; height: auto; display: block; }
 .top-bar-inner { display: flex; justify-content: space-between; align-items: center; }
 .top-bar-text { opacity: .85; }
 .top-bar-links { display: flex; gap: 1rem; }
-.top-bar-wa { color: rgba(255,255,255,.9); display: flex; align-items: center; gap: .35rem; }
-.top-bar-wa:hover { color: var(--wa-green); }
+.top-bar-wa { color: var(--wa-green); display: flex; align-items: center; gap: .4rem; font-weight: 600; }
+.top-bar-wa:hover { color: var(--wa-dark); text-decoration: underline; }
 
 /* ========================================
    HEADER
