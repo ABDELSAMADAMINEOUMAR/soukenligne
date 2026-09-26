@@ -4,26 +4,23 @@ require('dotenv').config();
 
 let pool;
 
-async function initDatabase() {
-  if (pool) return pool;
-
-  if (!process.env.DATABASE_URL) {
-    console.error('DATABASE_URL is not set. Please set it in your environment variables.');
+function getDb() {
+  if (!pool) {
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL is not set. Please set it in your environment variables.');
+    }
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: (!process.env.DATABASE_URL || process.env.DATABASE_URL.includes('localhost')) ? false : { rejectUnauthorized: false },
+      max: process.env.VERCEL ? 1 : 10
+    });
   }
-
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
-  });
-
-  await initTables();
   return pool;
 }
 
-function getDb() {
-  if (!pool) {
-    throw new Error('Database not initialized. Call initDatabase() first.');
-  }
+async function initDatabase() {
+  getDb(); // Ensure pool is initialized
+  await initTables();
   return pool;
 }
 
@@ -31,6 +28,19 @@ async function initTables() {
   const db = getDb();
 
   // Create tables using PostgreSQL syntax
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS "session" (
+      "sid" varchar NOT NULL COLLATE "default",
+      "sess" json NOT NULL,
+      "expire" timestamp(6) NOT NULL,
+      PRIMARY KEY ("sid")
+    )
+  `);
+  
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire")
+  `);
+
   await db.query(`
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,

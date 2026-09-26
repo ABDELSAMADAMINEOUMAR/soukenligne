@@ -22,15 +22,27 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-// Session (in-memory store — fine for single-server deployment)
+const pgSession = require('connect-pg-simple')(session);
+
+if (!process.env.SESSION_SECRET) {
+  console.error("FATAL ERROR: SESSION_SECRET environment variable is missing.");
+  process.exit(1);
+}
+
+// Session (PostgreSQL backed for serverless persistence)
+app.set('trust proxy', 1);
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'soukenligne-secret-key-change-in-production',
+  store: new pgSession({
+    pool: getDb(),
+    tableName: 'session'
+  }),
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
-    secure: false
+    secure: true
   }
 }));
 
@@ -57,42 +69,8 @@ app.use((err, req, res, next) => {
   res.status(500).send('Erreur interne du serveur');
 });
 
-// Initialize database then start server
-async function start() {
-  await initDatabase();
-
-  // Seed if empty
-  const db = getDb();
-  try {
-    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_notes TEXT');
-    await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_seen_cancellation BOOLEAN DEFAULT false');
-    
-    // Migrate old SoukEnLigne branding to Baron Technology
-    await db.query("UPDATE settings SET value = 'Baron Technology' WHERE key = 'store_name' AND value = 'SoukEnLigne'");
-    await db.query("UPDATE settings SET value = 'Votre satisfaction est notre priorité' WHERE key = 'store_tagline' AND value LIKE '%march%Tchad%'");
-    await db.query("UPDATE settings SET value = 'Baron Technology — Votre satisfaction est notre priorité. Achetez en ligne, payez à la livraison.' WHERE key = 'store_description' AND value LIKE '%SoukEnLigne%'");
-    await db.query("UPDATE settings SET value = '23566731494' WHERE key = 'whatsapp_number' AND value = '23566000000'");
-    await db.query("UPDATE settings SET value = '+235 66 73 14 94' WHERE key = 'store_phone' AND value LIKE '%66 00 00 00%'");
-    await db.query("UPDATE settings SET value = 'barontechnologyltd@gmail.com' WHERE key = 'store_email' AND value LIKE '%soukenligne%'");
-    await db.query("UPDATE settings SET value = 'Dinguessou, Autour du rond point Pence' WHERE key = 'store_address' AND value LIKE '%Djam%'");
-    await db.query("UPDATE settings SET value = 'Baron Technology — Votre satisfaction est notre priorité' WHERE key = 'meta_title' AND value LIKE '%SoukEnLigne%'");
-    await db.query("UPDATE settings SET value = 'Baron Technology est votre boutique en ligne au Tchad. Découvrez nos produits, commandez en ligne et payez à la livraison.' WHERE key = 'meta_description' AND value LIKE '%SoukEnLigne%'");
-
-    // Migrate old admin email
-    await db.query("UPDATE users SET email = 'admin@barontechnology.td', phone = '+23566731494' WHERE email = 'admin@soukenligne.td' AND role = 'admin'");
-    
-    // Migrate existing guest emails
-    await db.query("UPDATE users SET email = REPLACE(email, '@soukenligne.td', '@barontechnology.td') WHERE email LIKE 'guest_%@soukenligne.td'");
-
-    const productCountRes = await db.query('SELECT COUNT(*) as c FROM products');
-    if (parseInt(productCountRes.rows[0].c) === 0) {
-      const { runSeed } = require('./db/seed');
-      await runSeed();
-    }
-  } catch (err) {
-    console.error('Error checking seed data or altering tables:', err);
-  }
-
+// Start server if run directly (e.g. node server.js or Render deployment)
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`\n🛒 Baron Technology est en ligne !`);
     console.log(`   → http://localhost:${PORT}`);
@@ -102,7 +80,5 @@ async function start() {
   });
 }
 
-start().catch(err => {
-  console.error('Erreur de démarrage:', err);
-  process.exit(1);
-});
+// Export the Express app for Vercel Serverless Functions
+module.exports = app;

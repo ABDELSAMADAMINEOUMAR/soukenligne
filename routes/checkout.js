@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb, getSettings } = require('../db/init');
 const { requireAuth } = require('../middleware/auth');
 const crypto = require('crypto');
+const { sendAdminOrderNotification } = require('../utils/email');
 
 function generateOrderNumber() {
   const date = new Date();
@@ -102,14 +103,15 @@ router.post('/confirmer', async (req, res) => {
     const orderRes = await db.query(`
       INSERT INTO orders (order_number, user_id, subtotal, delivery_fee, total, payment_method, status,
         delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes)
-      VALUES ($1, $2, $3, $4, $5, 'cash_on_delivery', 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING id
+      VALUES ($1, $2, $3, $4, $5, 'cash_on_delivery', 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING *
     `, [
       orderNumber, finalUserId, subtotal, deliveryFee, total,
       delivery_full_name, delivery_phone, finalCity, delivery_neighborhood,
       delivery_address, delivery_landmark || null, delivery_notes || null
     ]);
     
-    const orderId = orderRes.rows[0].id;
+    const orderObj = orderRes.rows[0];
+    const orderId = orderObj.id;
 
     for (const item of cartItems) {
       await db.query(`
@@ -129,6 +131,10 @@ router.post('/confirmer', async (req, res) => {
 
     await db.query('COMMIT');
     req.session.cart = [];
+    
+    // Notify admin
+    sendAdminOrderNotification(orderObj, cartItems, settings).catch(console.error);
+
     res.redirect(`/commande/confirmation/${orderNumber}`);
 
   } catch (err) {

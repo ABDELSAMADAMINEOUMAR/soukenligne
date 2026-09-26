@@ -60,9 +60,9 @@
   text-align: center;
 }
 .stat-highlight { border-color: var(--primary); background: var(--gray-50); border-width: 2px; }
-.stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); }
+.stat-value { font-size: 1.5rem; font-weight: 800; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat-highlight .stat-value { color: var(--primary); }
-.stat-label { font-size: .78rem; color: var(--text-muted); margin-top: .15rem; text-transform: uppercase; letter-spacing: .03em; }
+.stat-label { font-size: .78rem; color: var(--text-muted); margin-top: .15rem; text-transform: uppercase; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .admin-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
 .admin-card {
@@ -96,5 +96,9 @@
   .admin-main { margin-left: 0; }
   .admin-menu-btn { display: block; }
   .admin-grid-2 { grid-template-columns: 1fr; }
-  .admin-stats { grid-template-columns: repeat(2, 1fr); }
+  .admin-stats { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+  .stat-card { padding: 1rem; }
+  .stat-value { font-size: 1.25rem; }
+  .stat-label { font-size: 0.7rem; }
+  .admin-stats .stat-card:last-child { grid-column: span 2; }
 }

@@ -29,20 +29,22 @@
     <% if (recentOrders.length === 0) { %>
     <p class="text-muted">Aucune commande pour le moment.</p>
     <% } else { %>
-    <table class="data-table">
-      <thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
-      <tbody>
-        <% recentOrders.forEach(o => { %>
-        <tr onclick="location.href='/admin/commandes/<%= o.id %>'" style="cursor:pointer">
-          <td><strong><%= o.order_number %></strong></td>
-          <td><%= o.customer_name %></td>
-          <td><%= formatPrice(o.total) %></td>
-          <td><span class="status-badge <%= statusClass(o.status) %>"><%= statusLabel(o.status) %></span></td>
-          <td><%= new Date(o.created_at).toLocaleDateString('fr-FR') %></td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
+        <tbody>
+          <% recentOrders.forEach(o => { %>
+          <tr onclick="location.href='/admin/commandes/<%= o.id %>'" style="cursor:pointer">
+            <td><strong><%= o.order_number %></strong></td>
+            <td><%= o.customer_name %></td>
+            <td><%= formatPrice(o.total) %></td>
+            <td><span class="status-badge <%= statusClass(o.status) %>"><%= statusLabel(o.status) %></span></td>
+            <td><%= new Date(o.created_at).toLocaleDateString('fr-FR') %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
     <% } %>
   </div>
 
@@ -51,18 +53,20 @@
     <% if (topProducts.length === 0) { %>
     <p class="text-muted">Aucune vente pour le moment.</p>
     <% } else { %>
-    <table class="data-table">
-      <thead><tr><th>Produit</th><th>Vendus</th><th>Revenus</th></tr></thead>
-      <tbody>
-        <% topProducts.forEach(p => { %>
-        <tr>
-          <td><%= p.product_name %></td>
-          <td><%= p.total_sold %></td>
-          <td><%= formatPrice(p.total_revenue) %></td>
-        </tr>
-        <% }); %>
-      </tbody>
-    </table>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead><tr><th>Produit</th><th>Vendus</th><th>Revenus</th></tr></thead>
+        <tbody>
+          <% topProducts.forEach(p => { %>
+          <tr>
+            <td><%= p.product_name %></td>
+            <td><%= p.total_sold %></td>
+            <td><%= formatPrice(p.total_revenue) %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
     <% } %>
   </div>
 </div>
@@ -70,18 +74,20 @@
 <% if (lowStock.length > 0) { %>
 <div class="admin-card">
   <h3>⚠️ Stock faible</h3>
-  <table class="data-table">
-    <thead><tr><th>Produit</th><th>Stock</th><th>Action</th></tr></thead>
-    <tbody>
-      <% lowStock.forEach(p => { %>
-      <tr>
-        <td><%= p.name %></td>
-        <td><span class="stock-low"><%= p.stock_quantity %></span></td>
-        <td><a href="/admin/produits/modifier/<%= p.id %>" class="btn btn-sm btn-outline">Modifier</a></td>
-      </tr>
-      <% }); %>
-    </tbody>
-  </table>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead><tr><th>Produit</th><th>Stock</th><th>Action</th></tr></thead>
+      <tbody>
+        <% lowStock.forEach(p => { %>
+        <tr>
+          <td><%= p.name %></td>
+          <td><span class="stock-low"><%= p.stock_quantity %></span></td>
+          <td><a href="/admin/produits/modifier/<%= p.id %>" class="btn btn-sm btn-outline">Modifier</a></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
 </div>
 <% } %>
 
