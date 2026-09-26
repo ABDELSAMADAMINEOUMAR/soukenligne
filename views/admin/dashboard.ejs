@@ -29,7 +29,9 @@
     <% if (recentOrders.length === 0) { %>
     <p class="text-muted">Aucune commande pour le moment.</p>
     <% } else { %>
-    <div class="table-responsive">
+
+    <!-- Desktop table -->
+    <div class="table-responsive d-none-mobile">
       <table class="data-table">
         <thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
         <tbody>
@@ -45,6 +47,24 @@
         </tbody>
       </table>
     </div>
+
+    <!-- Mobile cards -->
+    <div class="d-none-desktop mobile-cards">
+      <% recentOrders.forEach(o => { %>
+      <a href="/admin/commandes/<%= o.id %>" class="mobile-order-card">
+        <div class="mobile-order-header">
+          <strong><%= o.order_number %></strong>
+          <span class="status-badge <%= statusClass(o.status) %>"><%= statusLabel(o.status) %></span>
+        </div>
+        <div class="mobile-order-body">
+          <span class="mobile-order-customer"><%= o.customer_name %></span>
+          <span class="mobile-order-total"><%= formatPrice(o.total) %></span>
+        </div>
+        <div class="mobile-order-date"><%= new Date(o.created_at).toLocaleDateString('fr-FR') %></div>
+      </a>
+      <% }); %>
+    </div>
+
     <% } %>
   </div>
 
