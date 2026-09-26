@@ -730,7 +730,8 @@ img { max-width: 100%; height: auto; display: block; }
 /* ========================================
    DATA TABLE
    ======================================== */
-.table-responsive { overflow-x: auto; }
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+.table-responsive .data-table { white-space: nowrap; min-width: max-content; }
 .data-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
 .data-table th { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); font-weight: 600; text-align: left; padding: .6rem .5rem; border-bottom: 2px solid var(--gray-200); }
 .data-table td { padding: .65rem .5rem; border-bottom: 1px solid var(--gray-100); vertical-align: middle; }
