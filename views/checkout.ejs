@@ -32,7 +32,7 @@
                   <select name="delivery_zone_id" class="form-input" id="delivery-zone-select" required>
                     <option value="" disabled <%= !defaultAddr ? 'selected' : '' %>>Sélectionnez une zone</option>
                     <% zones.forEach(zone => { %>
-                    <option value="<%= zone.id %>" data-fee="<%= zone.fee %>" <%= defaultAddr && defaultAddr.city === zone.name ? 'selected' : '' %>><%= zone.name %> — <%= formatPrice(zone.fee) %></option>
+                    <option value="<%= zone.id %>" data-fee="0" <%= defaultAddr && defaultAddr.city === zone.name ? 'selected' : '' %>><%= zone.name %></option>
                     <% }); %>
                   </select>
                 <% } else { %>
@@ -108,11 +108,11 @@
           </div>
           <div class="summary-row">
             <span>Livraison</span>
-            <span id="delivery-fee-display"><%= formatPrice(zones.length > 0 ? zones[0].fee : defaultFee) %></span>
+            <span id="delivery-fee-display" style="color: var(--success); font-weight: 600;">Gratuit</span>
           </div>
           <div class="summary-row summary-total">
             <span>Total</span>
-            <span id="total-display"><%= formatPrice(cartTotal + (zones.length > 0 ? zones[0].fee : defaultFee)) %></span>
+            <span id="total-display"><%= formatPrice(cartTotal) %></span>
           </div>
         </div>
       </div>
@@ -132,13 +132,9 @@
   }
 
   function updateTotals() {
-    if (!select) return;
-    const option = select.options[select.selectedIndex];
-    if (option && option.dataset.fee) {
-      const fee = parseInt(option.dataset.fee) || 0;
-      feeEl.textContent = fmt(fee);
-      totalEl.textContent = fmt(subtotal + fee);
-    }
+    // Delivery is always free
+    if (feeEl) feeEl.textContent = 'Gratuit';
+    if (totalEl) totalEl.textContent = fmt(subtotal);
   }
 
   if (select) {

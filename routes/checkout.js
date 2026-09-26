@@ -32,7 +32,7 @@ router.get('/', async (req, res) => {
     
     const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
     const settings = await getSettings();
-    const defaultFee = parseInt(settings.default_delivery_fee) || 0;
+    const defaultFee = 0; // Free delivery
 
     const error = req.query.error ? 'Une erreur est survenue lors de la création de la commande. Veuillez réessayer.' : null;
 
@@ -72,13 +72,12 @@ router.post('/confirmer', async (req, res) => {
 
     // Get delivery fee and city name from zone
     const settings = await getSettings();
-    let deliveryFee = parseInt(settings.default_delivery_fee) || 0;
+    let deliveryFee = 0; // Free delivery for all orders
     let finalCity = delivery_city || ''; // Fallback for no zones
     if (delivery_zone_id) {
       const zoneRes = await db.query('SELECT name, fee FROM delivery_zones WHERE id = $1', [parseInt(delivery_zone_id)]);
       const zone = zoneRes.rows[0];
       if (zone) {
-        deliveryFee = zone.fee;
         finalCity = zone.name;
       }
     }

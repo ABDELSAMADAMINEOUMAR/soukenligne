@@ -47,7 +47,7 @@ async function sendAdminOrderNotification(order, items, settings, storeUrl = 'ht
         <h3>Détails de la commande:</h3>
         ${itemsHtml}
         <p><strong>Sous-total:</strong> ${order.subtotal} FCFA</p>
-        <p><strong>Frais de livraison:</strong> ${order.delivery_fee} FCFA</p>
+        <p><strong>Frais de livraison:</strong> <span style="color: #22C55E; font-weight: 600;">Gratuit</span></p>
         <p><strong>Total:</strong> ${order.total} FCFA</p>
         <hr>
         <p><a href="${storeUrl}/admin/commandes/${order.id}">Voir la commande dans l'administration</a></p>

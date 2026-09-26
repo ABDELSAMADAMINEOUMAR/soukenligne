@@ -208,7 +208,7 @@ async function initTables() {
     store_address: 'Dinguessou, Autour du rond point Pence',
     currency: 'FCFA',
     currency_code: 'XAF',
-    default_delivery_fee: '1500',
+    default_delivery_fee: '0',
     meta_title: 'Baron Technology — Votre satisfaction est notre priorité',
     meta_description: 'Baron Technology est votre boutique en ligne au Tchad. Découvrez nos produits, commandez en ligne et payez à la livraison.',
     facebook_url: 'https://facebook.com/barontechnologyltd',
