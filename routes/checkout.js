@@ -132,8 +132,12 @@ router.post('/confirmer', async (req, res) => {
     await db.query('COMMIT');
     req.session.cart = [];
     
+    // Get store URL
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const storeUrl = `${protocol}://${req.headers.host}`;
+
     // Notify admin
-    sendAdminOrderNotification(orderObj, cartItems, settings).catch(console.error);
+    sendAdminOrderNotification(orderObj, cartItems, settings, storeUrl).catch(console.error);
 
     res.redirect(`/commande/confirmation/${orderNumber}`);
 

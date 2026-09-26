@@ -13,7 +13,7 @@ const getTransporter = () => {
   });
 };
 
-async function sendAdminOrderNotification(order, items, settings) {
+async function sendAdminOrderNotification(order, items, settings, storeUrl = 'http://localhost:3000') {
   try {
     // If SMTP_USER is not configured, we might not be able to send emails
     if (!process.env.SMTP_USER) {
@@ -30,7 +30,8 @@ async function sendAdminOrderNotification(order, items, settings) {
 
     let itemsHtml = '<ul>';
     items.forEach(item => {
-      itemsHtml += `<li>${item.quantity}x ${item.product_name} - ${item.subtotal} FCFA</li>`;
+      const subtotal = item.price * item.quantity;
+      itemsHtml += `<li>${item.quantity}x ${item.product.name} - ${subtotal} FCFA</li>`;
     });
     itemsHtml += '</ul>';
 
@@ -49,7 +50,7 @@ async function sendAdminOrderNotification(order, items, settings) {
         <p><strong>Frais de livraison:</strong> ${order.delivery_fee} FCFA</p>
         <p><strong>Total:</strong> ${order.total} FCFA</p>
         <hr>
-        <p><a href="http://localhost:3000/admin/commandes/${order.id}">Voir la commande dans l'administration</a></p>
+        <p><a href="${storeUrl}/admin/commandes/${order.id}">Voir la commande dans l'administration</a></p>
       `
     };
 
