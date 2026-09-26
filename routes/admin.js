@@ -411,9 +411,9 @@ router.post('/parametres', async (req, res) => {
 
 router.post('/zones/ajouter', async (req, res) => {
   try {
-    const { name, fee } = req.body;
+    const { name } = req.body;
     const db = getDb();
-    await db.query('INSERT INTO delivery_zones (name, fee) VALUES ($1, $2)', [name, parseInt(fee) || 0]);
+    await db.query('INSERT INTO delivery_zones (name, fee) VALUES ($1, 0)', [name]);
     res.redirect('/admin/parametres');
   } catch (err) {
     console.error(err);

@@ -34,10 +34,7 @@
         <label>Adresse</label>
         <input type="text" name="store_address" class="form-input" value="<%= settings.store_address || '' %>">
       </div>
-      <div class="form-group">
-        <label>Frais de livraison par défaut (FCFA)</label>
-        <input type="number" name="default_delivery_fee" class="form-input" value="<%= settings.default_delivery_fee || 0 %>">
-      </div>
+
 
       <details class="form-details">
         <summary>Réseaux sociaux</summary>
@@ -74,12 +71,11 @@
   <div class="admin-card">
     <h3>Zones de livraison</h3>
     <table class="data-table">
-      <thead><tr><th>Zone</th><th>Frais</th><th></th></tr></thead>
+      <thead><tr><th>Zone</th><th></th></tr></thead>
       <tbody>
         <% zones.forEach(z => { %>
         <tr>
           <td><%= z.name %></td>
-          <td><%= formatPrice(z.fee) %></td>
           <td>
             <form action="/admin/zones/supprimer/<%= z.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer cette zone ?')">
               <button type="submit" class="btn btn-sm btn-danger">×</button>
@@ -92,15 +88,10 @@
 
     <h4 style="margin-top:1.5rem">Ajouter une zone</h4>
     <form action="/admin/zones/ajouter" method="POST">
-      <div class="form-row">
-        <div class="form-group" style="flex:2">
-          <input type="text" name="name" placeholder="Nom de la zone" required class="form-input">
-        </div>
-        <div class="form-group">
-          <input type="number" name="fee" placeholder="Frais (FCFA)" required class="form-input" min="0">
-        </div>
-        <button type="submit" class="btn btn-primary" style="align-self:flex-end">Ajouter</button>
+      <div class="form-group">
+        <input type="text" name="name" placeholder="Nom de la zone" required class="form-input">
       </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:.5rem">Ajouter</button>
     </form>
   </div>
 </div>
