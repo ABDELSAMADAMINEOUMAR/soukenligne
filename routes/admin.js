@@ -457,9 +457,10 @@ router.post('/changer-mot-de-passe', async (req, res) => {
     await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.session.userId]);
     await db.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [req.session.userId]);
     
+    const userId = req.session.userId;
     req.session.regenerate((err) => {
       if (err) console.error(err);
-      req.session.userId = req.session.userId;
+      req.session.userId = userId;
       req.session.userRole = 'admin';
       res.redirect('/admin/parametres?success=password_changed');
     });
