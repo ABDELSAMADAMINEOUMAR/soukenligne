@@ -42,7 +42,8 @@ app.use(session({
   cookie: {
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
-    secure: true
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
   }
 }));
 
@@ -74,9 +75,7 @@ if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`\n🛒 Baron Technology est en ligne !`);
     console.log(`   → http://localhost:${PORT}`);
-    console.log(`   → Admin: http://localhost:${PORT}/admin`);
-    console.log(`   → Email: admin@barontechnology.td`);
-    console.log(`   → Mot de passe: admin123\n`);
+    console.log(`   → Admin: http://localhost:${PORT}/admin\n`);
   });
 }
 

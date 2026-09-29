@@ -24,7 +24,7 @@ async function sendAdminOrderNotification(order, items, settings, storeUrl = 'ht
     const transporter = getTransporter();
     
     // Admin email from settings, or fallback
-    const adminEmail = settings.store_email || 'admin@barontechnology.td';
+    const adminEmail = settings.store_email || process.env.ADMIN_DEFAULT_EMAIL || 'barontechnologyltd@gmail.com';
     
     const storeName = settings.store_name || 'Baron Technology';
 

@@ -182,6 +182,16 @@ async function initTables() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL,
+      expires_at TIMESTAMP NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // Create Indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)',
@@ -223,10 +233,17 @@ async function initTables() {
   // Create admin user if not exists
   const adminRes = await db.query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
   if (adminRes.rows.length === 0) {
-    const hash = bcrypt.hashSync('admin123', 10);
-    await db.query('INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, $5)', [
-      'Administrateur', 'admin@barontechnology.td', '+23566731494', hash, 'admin'
-    ]);
+    const defaultEmail = process.env.ADMIN_DEFAULT_EMAIL;
+    const defaultPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+    if (defaultEmail && defaultPassword) {
+      const hash = bcrypt.hashSync(defaultPassword, 10);
+      await db.query('INSERT INTO users (full_name, email, password_hash, role) VALUES ($1, $2, $3, $4)', [
+        'Administrateur', defaultEmail, hash, 'admin'
+      ]);
+      console.log('Admin account created from environment variables.');
+    } else {
+      console.log('Skipping admin creation: ADMIN_DEFAULT_EMAIL or ADMIN_DEFAULT_PASSWORD is not set.');
+    }
   }
 }
 

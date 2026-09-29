@@ -33,8 +33,8 @@ Le serveur démarre sur **http://localhost:3000**
 ## 🔐 Accès Admin
 
 - URL : http://localhost:3000/admin
-- Email : `admin@soukenligne.td`
-- Mot de passe : `admin123`
+- L'email administrateur est configuré dans l'environnement de production.
+- Le mot de passe initial est configuré dans l'environnement de production.
 
 > ⚠️ Changez le mot de passe admin en production !
 

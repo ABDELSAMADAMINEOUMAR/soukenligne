@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const slugify = require('slugify');
+const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 const { getDb, getSettings, setSetting } = require('../db/init');
 const { requireAdmin } = require('../middleware/auth');
@@ -429,6 +430,42 @@ router.post('/zones/supprimer/:id', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.redirect('/admin/parametres');
+  }
+});
+
+router.post('/changer-mot-de-passe', async (req, res) => {
+  try {
+    const { current_password, new_password, new_password_confirm } = req.body;
+    
+    if (new_password !== new_password_confirm) {
+      return res.redirect('/admin/parametres?error=passwords_mismatch');
+    }
+    
+    if (new_password.length < 12) {
+      return res.redirect('/admin/parametres?error=password_too_short');
+    }
+    
+    const db = getDb();
+    const userRes = await db.query('SELECT password_hash FROM users WHERE id = $1', [req.session.userId]);
+    const user = userRes.rows[0];
+    
+    if (!user || !bcrypt.compareSync(current_password, user.password_hash)) {
+      return res.redirect('/admin/parametres?error=current_password_incorrect');
+    }
+    
+    const newHash = bcrypt.hashSync(new_password, 10);
+    await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.session.userId]);
+    await db.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [req.session.userId]);
+    
+    req.session.regenerate((err) => {
+      if (err) console.error(err);
+      req.session.userId = req.session.userId;
+      req.session.userRole = 'admin';
+      res.redirect('/admin/parametres?success=password_changed');
+    });
+  } catch (err) {
+    console.error(err);
+    res.redirect('/admin/parametres?error=server_error');
   }
 });
 
