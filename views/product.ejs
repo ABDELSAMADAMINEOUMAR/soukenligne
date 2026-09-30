@@ -81,6 +81,7 @@
         <% } else { %>
           <% if (product.is_available && product.stock_quantity > 0) { %>
           <form action="/panier/ajouter" method="POST" class="product-actions">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="product_id" value="<%= product.id %>">
             <div class="quantity-selector">
               <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>

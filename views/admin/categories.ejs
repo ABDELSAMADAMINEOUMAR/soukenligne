@@ -20,6 +20,7 @@
           <td class="actions-cell" style="display: flex; gap: 0.5rem;">
             <button type="button" class="btn btn-sm btn-outline" onclick="editCategory('<%= cat.id %>', '<%= cat.name.replace(/'/g, "\\'") %>', '<%= (cat.description || '').replace(/'/g, "\\'") %>', <%= cat.is_active %>)">Éditer</button>
             <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" onsubmit="return confirm('Désactiver cette catégorie ?')">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">Désactiver</button>
             </form>
           </td>
@@ -32,6 +33,7 @@
   <div class="admin-card">
     <h3 id="form-title">Ajouter une catégorie</h3>
     <form id="category-form" action="/admin/categories/ajouter" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label>Nom *</label>
         <input type="text" id="cat-name" name="name" required class="form-input">

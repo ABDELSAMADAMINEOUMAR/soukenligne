@@ -4,6 +4,7 @@
   <div class="admin-card">
     <h3>Paramètres de la boutique</h3>
     <form action="/admin/parametres" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label>Nom de la boutique</label>
         <input type="text" name="store_name" class="form-input" value="<%= settings.store_name || '' %>">
@@ -78,6 +79,7 @@
           <td><%= z.name %></td>
           <td>
             <form action="/admin/zones/supprimer/<%= z.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer cette zone ?')">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">×</button>
             </form>
           </td>
@@ -88,6 +90,7 @@
 
     <h4 style="margin-top:1.5rem">Ajouter une zone</h4>
     <form action="/admin/zones/ajouter" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <input type="text" name="name" placeholder="Nom de la zone" required class="form-input">
       </div>
@@ -100,6 +103,7 @@
   <div class="admin-card" style="max-width: 600px;">
     <h3>Sécurité</h3>
     <form action="/admin/changer-mot-de-passe" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="form-group">
         <label>Mot de passe actuel</label>
         <input type="password" name="current_password" required class="form-input">

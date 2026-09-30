@@ -11,6 +11,7 @@
     <div class="checkout-layout">
       <div class="checkout-form-col">
         <form action="/commande/confirmer" method="POST" id="checkout-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="form-section">
             <h2 class="form-section-title">Informations de livraison</h2>
 

@@ -47,10 +47,30 @@ app.use(session({
   }
 }));
 
+// Initialize CSRF protection
+const { csrfSync } = require('csrf-sync');
+const { generateToken, csrfSynchronisedProtection } = csrfSync({
+  getTokenFromRequest: (req) => {
+    if (req.body && req.body._csrf) {
+      return req.body._csrf;
+    }
+    return req.headers['x-csrf-token'];
+  }
+});
+
+// Provide CSRF token to all templates
+app.use((req, res, next) => {
+  res.locals.csrfToken = generateToken(req);
+  next();
+});
+
 // Global middleware
 app.use(loadUser);
 app.use(loadCart);
 app.use(loadHelpers);
+
+// Apply CSRF protection globally to all state-changing routes
+app.use(csrfSynchronisedProtection);
 
 // Routes
 app.use('/', require('./routes/shop'));
@@ -66,6 +86,10 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    console.error('Invalid CSRF token:', err);
+    return res.status(403).send('Action non autorisée (CSRF invalide).');
+  }
   console.error(err);
   res.status(500).send('Erreur interne du serveur');
 });

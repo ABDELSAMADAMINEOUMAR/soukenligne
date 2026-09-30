@@ -14,6 +14,7 @@
           </div>
           <% if (order.status === 'pending') { %>
             <form action="/compte/commande/<%= order.order_number %>/annuler" method="POST" onsubmit="return confirm('Êtes-vous sûr de vouloir annuler cette commande ? Cette action est irréversible.');">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-outline" style="color: #ef4444; border-color: #ef4444;">Annuler la commande</button>
             </form>
           <% } %>

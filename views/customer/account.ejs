@@ -16,7 +16,10 @@
         <nav class="account-nav">
           <a href="#orders" class="active" onclick="switchTab('orders-section', this); return false;">Mes commandes</a>
           <a href="#profile" onclick="switchTab('profile-section', this); return false;">Mon profil</a>
-          <a href="/compte/deconnexion">Déconnexion</a>
+          <form action="/compte/deconnexion" method="POST" style="display:inline">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="logout-btn" style="background:none; border:none; color:inherit; font:inherit; cursor:pointer; text-decoration:underline;">Déconnexion</button>
+          </form>
         </nav>
       </div>
 
@@ -51,6 +54,7 @@
         <div class="account-section" id="profile-section" style="display: none;">
           <h2>Mon profil</h2>
           <form action="/compte/profil" method="POST" class="profile-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <div class="form-row">
               <div class="form-group">
                 <label>Nom complet</label>

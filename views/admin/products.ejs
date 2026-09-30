@@ -45,6 +45,7 @@
             <a href="/admin/produits/modifier/<%= p.id %>" class="btn btn-sm btn-outline">Modifier</a>
             <button type="button" class="btn btn-sm btn-outline" title="Aperçu rapide" onclick='openQuickView(<%- JSON.stringify(p).replace(/'/g, "\\'") %>)'>👁</button>
             <form action="/admin/produits/supprimer/<%= p.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce produit ?')">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
             </form>
           </td>

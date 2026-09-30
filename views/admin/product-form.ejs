@@ -6,6 +6,7 @@
   <% } %>
 
   <form action="/admin/produits/<%= product && product.id ? 'modifier/' + product.id : 'ajouter' %>" method="POST" enctype="multipart/form-data">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="form-row">
       <div class="form-group" style="flex:2">
         <label>Nom du produit *</label>
@@ -87,6 +88,7 @@
         <div class="image-item">
           <img src="<%= img.image_path %>" alt="">
           <form action="/admin/produits/supprimer-image/<%= img.id %>" method="POST" style="position:absolute;top:4px;right:4px">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <button type="submit" class="img-delete-btn" title="Supprimer" onclick="return confirm('Supprimer cette image ?')">×</button>
           </form>
         </div>

@@ -58,6 +58,7 @@
     <div class="admin-card">
       <h3>Mettre à jour le statut</h3>
       <form action="/admin/commandes/<%= order.id %>/statut" method="POST">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div class="form-group">
           <select name="status" class="form-input">
             <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>En attente</option>

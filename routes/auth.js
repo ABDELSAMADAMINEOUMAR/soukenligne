@@ -475,7 +475,7 @@ router.get('/auth/google/callback', async (req, res) => {
   }
 });
 // Logout
-router.get('/deconnexion', (req, res) => {
+router.post('/deconnexion', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/');
   });
