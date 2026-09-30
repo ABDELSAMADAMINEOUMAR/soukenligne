@@ -33,9 +33,20 @@ const resetLimiter = rateLimit({
   handler: (req, res) => res.status(429).send('Trop de tentatives. Veuillez réessayer plus tard.')
 });
 
+/**
+ * Validates and sanitizes the returnTo URL to prevent Open Redirects.
+ * Must start with exactly one forward slash, not followed by a slash or backslash.
+ */
+function getSafeRedirectUrl(url, defaultUrl = '/compte') {
+  if (typeof url === 'string' && (url === '/' || /^\/[^\/\\]/.test(url))) {
+    return url;
+  }
+  return defaultUrl;
+}
+
 // Login page
 router.get('/connexion', (req, res) => {
-  if (req.session.userId) return res.redirect(req.session.returnTo || '/compte');
+  if (req.session.userId) return res.redirect(getSafeRedirectUrl(req.session.returnTo, '/compte'));
   res.render('customer/login', { pageTitle: 'Connexion', error: null });
 });
 
@@ -60,21 +71,11 @@ router.post('/connexion', loginLimiter, async (req, res) => {
       return res.render('customer/login', { pageTitle: 'Connexion', error: 'Email ou mot de passe incorrect.' });
     }
 
-    req.session.regenerate((err) => {
+    establishSession(req, res, user, (err, redirectTo) => {
       if (err) {
-        console.error(err);
         return res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur serveur.' });
       }
-      req.session.userId = user.id;
-      req.session.userRole = user.role;
-      req.session.userName = user.full_name;
-
-      let returnTo = req.session.returnTo || '/compte';
-      if (user.role === 'admin') {
-        returnTo = '/admin';
-      }
-      delete req.session.returnTo;
-      res.redirect(returnTo);
+      res.redirect(redirectTo);
     });
   } catch (err) {
     console.error(err);
@@ -128,13 +129,14 @@ router.post('/inscription', async (req, res) => {
       [full_name, email, phone || null, whatsapp || null, hash]
     );
 
-    req.session.userId = result.rows[0].id;
-    req.session.userRole = 'customer';
-    req.session.userName = full_name;
-
-    const returnTo = req.session.returnTo;
-    delete req.session.returnTo;
-    res.redirect(returnTo || '/compte');
+    const user = { id: result.rows[0].id, role: 'customer', full_name };
+    
+    establishSession(req, res, user, (err, redirectTo) => {
+      if (err) {
+        return res.render('customer/register', { pageTitle: 'Créer un compte', error: 'Erreur serveur.', form: req.body });
+      }
+      res.redirect(redirectTo);
+    });
   } catch (err) {
     console.error(err);
     res.render('customer/register', { pageTitle: 'Créer un compte', error: 'Erreur serveur.', form: req.body });
@@ -360,25 +362,32 @@ async function findOrCreateSocialUser({ provider, providerId, email, name, avata
  * Preserves cart data across session.regenerate().
  */
 function establishSession(req, res, user, callback) {
-  // Preserve cart before regenerating
   const cart = req.session.cart || [];
-  const returnTo = req.session.returnTo;
+  const returnTo = getSafeRedirectUrl(req.session.returnTo, '/compte');
 
   req.session.regenerate((err) => {
     if (err) {
       console.error('Session regenerate error:', err);
       return callback(err);
     }
+    
     req.session.userId = user.id;
     req.session.userRole = user.role;
     req.session.userName = user.full_name;
     req.session.cart = cart; // Restore cart
 
-    let redirectTo = returnTo || '/compte';
+    let redirectTo = returnTo;
     if (user.role === 'admin') {
       redirectTo = '/admin';
     }
-    callback(null, redirectTo);
+
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error('Session save error:', saveErr);
+        return callback(saveErr);
+      }
+      callback(null, redirectTo);
+    });
   });
 }
 
