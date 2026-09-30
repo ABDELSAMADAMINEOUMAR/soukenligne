@@ -1061,3 +1061,23 @@ img { max-width: 100%; height: auto; display: block; }
   color: var(--text-muted);
   font-size: 0.9rem;
 }
+
+/* Loading state for buttons */
+.btn.loading {
+  opacity: 0.8;
+  cursor: not-allowed;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner-icon {
+  animation: spin 1s linear infinite;
+}

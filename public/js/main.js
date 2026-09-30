@@ -115,3 +115,39 @@ document.addEventListener('click', function(e) {
     });
   }
 });
+
+// Handle form submission loading states
+document.addEventListener('DOMContentLoaded', () => {
+  const formsToHandle = document.querySelectorAll('form.auth-form, form.checkout-form');
+  
+  formsToHandle.forEach(form => {
+    form.addEventListener('submit', function() {
+      const submitBtn = this.querySelector('button[type="submit"]');
+      if (submitBtn && !submitBtn.classList.contains('loading')) {
+        // Prevent double click visual (actual prevention is handled by disabling button or pointer-events)
+        const originalText = submitBtn.textContent.trim();
+        let loadingText = 'Chargement...';
+        
+        // Customize text based on original content
+        if (originalText.toLowerCase().includes('créer') || originalText.toLowerCase().includes('inscription')) {
+          loadingText = 'Création en cours...';
+        } else if (originalText.toLowerCase().includes('connecter') || originalText.toLowerCase().includes('connexion')) {
+          loadingText = 'Connexion...';
+        } else if (originalText.toLowerCase().includes('enregistrer') || originalText.toLowerCase().includes('sauvegarder')) {
+          loadingText = 'Enregistrement...';
+        } else if (originalText.toLowerCase().includes('commander') || originalText.toLowerCase().includes('valider')) {
+          loadingText = 'Traitement...';
+        }
+        
+        // Replace content with spinner
+        submitBtn.classList.add('loading');
+        submitBtn.innerHTML = `
+          <svg class="spinner-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+          </svg>
+          <span>${loadingText}</span>
+        `;
+      }
+    });
+  });
+});
