@@ -22,6 +22,55 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
+const crypto = require('crypto');
+const helmet = require('helmet');
+
+app.disable('x-powered-by');
+
+let supabaseHost = '';
+if (process.env.SUPABASE_URL) {
+  try {
+    supabaseHost = new URL(process.env.SUPABASE_URL).hostname;
+  } catch (e) {
+    console.error('Invalid SUPABASE_URL for CSP config');
+  }
+}
+
+// Generate nonce per request
+app.use((req, res, next) => {
+  res.locals.nonce = crypto.randomBytes(16).toString('hex');
+  next();
+});
+
+// Security headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: false,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", (req, res) => `'nonce-${res.locals.nonce}'`],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"].concat(supabaseHost ? [`https://${supabaseHost}`] : []),
+      connectSrc: ["'self'"],
+      formAction: ["'self'"],
+      frameAncestors: ["'none'"]
+    }
+  },
+  hsts: false, // Managed manually below
+  frameguard: { action: 'sameorigin' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  xContentTypeOptions: true
+}));
+
+// Apply HSTS only for HTTPS/production
+app.use((req, res, next) => {
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  next();
+});
+
 const pgSession = require('connect-pg-simple')(session);
 
 if (!process.env.SESSION_SECRET) {

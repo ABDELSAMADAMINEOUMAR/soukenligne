@@ -87,7 +87,7 @@
   </div>
 </div>
 
-<script>
+<script nonce="<%= nonce %>">
 function openQuickView(product) {
   document.getElementById('qv-title').textContent = product.name;
   document.getElementById('qv-category').textContent = product.category_name || 'Sans catégorie';

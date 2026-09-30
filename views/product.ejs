@@ -140,7 +140,7 @@
   </div>
 </section>
 
-<script>
+<script nonce="<%= nonce %>">
 function changeImage(thumb, src) {
   document.getElementById('main-product-image').src = src;
   document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('active'));
