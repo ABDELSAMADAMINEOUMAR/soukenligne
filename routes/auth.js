@@ -14,22 +14,41 @@ const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
+const PostgresStore = require('../utils/rate-limit-store');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 5,
+  store: new PostgresStore({ prefix: 'rl_login:' }),
   handler: (req, res) => res.render('customer/login', { pageTitle: 'Connexion', error: 'Trop de tentatives de connexion. Veuillez réessayer plus tard.' })
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  store: new PostgresStore({ prefix: 'rl_register:' }),
+  handler: (req, res) => res.render('customer/register', { pageTitle: 'Créer un compte', error: 'Trop de tentatives de création de compte. Veuillez réessayer plus tard.', form: req.body || {} })
 });
 
 const forgotLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 5,
-  handler: (req, res) => res.render('customer/forgot-password', { pageTitle: 'Mot de passe oublié', error: 'Trop de demandes. Veuillez réessayer plus tard.', success: null })
+  max: 3,
+  store: new PostgresStore({ prefix: 'rl_forgot_ip:' }),
+  handler: (req, res) => res.render('customer/forgot-password', { pageTitle: 'Mot de passe oublié', error: 'Trop de demandes depuis cette adresse. Veuillez réessayer plus tard.', success: null })
+});
+
+const forgotEmailLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  store: new PostgresStore({ prefix: 'rl_forgot_email:' }),
+  keyGenerator: (req) => req.body.email ? req.body.email.trim().toLowerCase() : req.ip,
+  handler: (req, res) => res.render('customer/forgot-password', { pageTitle: 'Mot de passe oublié', error: null, success: 'Si un compte avec cet email existe, un lien de réinitialisation a été envoyé.' })
 });
 
 const resetLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
+  store: new PostgresStore({ prefix: 'rl_reset:' }),
   handler: (req, res) => res.status(429).send('Trop de tentatives. Veuillez réessayer plus tard.')
 });
 
@@ -89,7 +108,7 @@ router.get('/inscription', (req, res) => {
   res.render('customer/register', { pageTitle: 'Créer un compte', error: null, form: {} });
 });
 
-router.post('/inscription', async (req, res) => {
+router.post('/inscription', registerLimiter, async (req, res) => {
   try {
     const { full_name, email, phone, whatsapp, password, password_confirm } = req.body;
     const db = getDb();
@@ -148,7 +167,7 @@ router.get('/mot-de-passe-oublie', (req, res) => {
   res.render('customer/forgot-password', { pageTitle: 'Mot de passe oublié', error: null, success: null });
 });
 
-router.post('/mot-de-passe-oublie', forgotLimiter, async (req, res) => {
+router.post('/mot-de-passe-oublie', forgotLimiter, forgotEmailLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     const db = getDb();
@@ -391,6 +410,7 @@ function establishSession(req, res, user, callback) {
 const socialAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
+  store: new PostgresStore({ prefix: 'rl_social:' }),
   handler: (req, res) => res.redirect('/compte/connexion')
 });
 

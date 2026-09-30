@@ -18,12 +18,36 @@ if (supabaseUrl && supabaseKey) {
 
 // Multer config (memory storage for Supabase upload)
 const storage = multer.memoryStorage();
-const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => {
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 10 }, fileFilter: (req, file, cb) => {
   const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
   cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
 }});
 
 router.use(requireAdmin);
+
+const rateLimit = require('express-rate-limit');
+const PostgresStore = require('../utils/rate-limit-store');
+
+const adminActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  store: new PostgresStore({ prefix: 'rl_admin_action:' }),
+  handler: (req, res) => res.status(429).send('Trop de requêtes admin. Veuillez réessayer plus tard.')
+});
+
+const adminPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  store: new PostgresStore({ prefix: 'rl_admin_pwd:' }),
+  handler: (req, res) => res.redirect('/admin/parametres?error=Trop de tentatives, veuillez réessayer plus tard.')
+});
+
+router.use((req, res, next) => {
+  if (req.method === 'POST') {
+    return adminActionLimiter(req, res, next);
+  }
+  next();
+});
 
 // Dashboard
 router.get('/', async (req, res) => {
@@ -433,7 +457,7 @@ router.post('/zones/supprimer/:id', async (req, res) => {
   }
 });
 
-router.post('/changer-mot-de-passe', async (req, res) => {
+router.post('/changer-mot-de-passe', adminPasswordLimiter, async (req, res) => {
   try {
     const { current_password, new_password, new_password_confirm } = req.body;
     

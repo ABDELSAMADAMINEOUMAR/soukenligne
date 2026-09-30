@@ -1,6 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const { getDb, getSettings } = require('../db/init');
+const rateLimit = require('express-rate-limit');
+const PostgresStore = require('../utils/rate-limit-store');
+
+const searchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  store: new PostgresStore({ prefix: 'rl_search:' }),
+  handler: (req, res) => res.status(429).json([])
+});
 
 // Homepage
 router.get('/', async (req, res) => {
@@ -157,7 +166,7 @@ router.get('/categorie/:slug', (req, res) => {
 });
 
 // Live Search API
-router.get('/api/search', async (req, res) => {
+router.get('/api/search', searchLimiter, async (req, res) => {
   try {
     const db = getDb();
     const query = req.query.q ? req.query.q.trim() : '';

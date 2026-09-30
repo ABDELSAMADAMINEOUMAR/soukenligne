@@ -121,6 +121,25 @@ app.use(loadHelpers);
 // Apply CSRF protection globally to all state-changing routes
 app.use(csrfSynchronisedProtection);
 
+const rateLimit = require('express-rate-limit');
+const PostgresStore = require('./utils/rate-limit-store');
+
+// Global rate limiter for state-changing actions (customer POST operations like cart, profile)
+const globalPostLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  store: new PostgresStore({ prefix: 'rl_global_post:' }),
+  handler: (req, res) => res.status(429).send('Trop de requêtes. Veuillez réessayer plus tard.')
+});
+
+app.use((req, res, next) => {
+  // Apply only to general POST requests that aren't already covered by stricter route-specific limiters
+  if (req.method === 'POST') {
+    return globalPostLimiter(req, res, next);
+  }
+  next();
+});
+
 // Routes
 app.use('/', require('./routes/shop'));
 app.use('/panier', require('./routes/cart'));

@@ -4,6 +4,15 @@ const { getDb, getSettings } = require('../db/init');
 const { requireAuth } = require('../middleware/auth');
 const crypto = require('crypto');
 const { sendAdminOrderNotification } = require('../utils/email');
+const rateLimit = require('express-rate-limit');
+const PostgresStore = require('../utils/rate-limit-store');
+
+const checkoutLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  store: new PostgresStore({ prefix: 'rl_checkout:' }),
+  handler: (req, res) => res.redirect('/commande?error=1')
+});
 
 function generateOrderNumber() {
   const date = new Date();
@@ -47,7 +56,7 @@ router.get('/', async (req, res) => {
 });
 
 // Place order
-router.post('/confirmer', async (req, res) => {
+router.post('/confirmer', checkoutLimiter, async (req, res) => {
   if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
   
   try {

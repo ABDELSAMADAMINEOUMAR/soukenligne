@@ -195,6 +195,14 @@ async function initTables() {
     )
   `);
 
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key TEXT PRIMARY KEY,
+      hits INTEGER NOT NULL DEFAULT 1,
+      expires_at BIGINT NOT NULL
+    )
+  `);
+
   // Create Indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id)',
