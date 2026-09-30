@@ -116,7 +116,6 @@ async function initTables() {
       whatsapp TEXT,
       password_hash TEXT,
       google_id TEXT UNIQUE,
-      apple_id TEXT UNIQUE,
       auth_provider TEXT DEFAULT 'local',
       avatar_url TEXT,
       role TEXT DEFAULT 'customer',
@@ -214,7 +213,6 @@ async function initTables() {
   // Social auth indexes (may fail on existing DBs before migration adds the columns)
   try {
     await db.query('CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)');
-    await db.query('CREATE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id)');
   } catch (e) {
     // Columns may not exist yet on existing databases; migrate.js will handle this
   }

@@ -5,8 +5,6 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
 const { getDb } = require('../db/init');
 const { requireAuth } = require('../middleware/auth');
 
@@ -16,12 +14,6 @@ const googleClient = new OAuth2Client(
   process.env.GOOGLE_CLIENT_SECRET
 );
 
-// Apple JWKS client for verifying Apple id_tokens
-const appleJwksClient = jwksClient({
-  jwksUri: 'https://appleid.apple.com/auth/keys',
-  cache: true,
-  cacheMaxAge: 86400000 // 24 hours
-});
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -60,7 +52,7 @@ router.post('/connexion', loginLimiter, async (req, res) => {
 
     // Social-only users don't have a password
     if (!user.password_hash) {
-      const provider = user.auth_provider === 'apple' ? 'Apple' : 'Google';
+      const provider = 'Google';
       return res.render('customer/login', { pageTitle: 'Connexion', error: `Ce compte utilise ${provider} pour se connecter. Utilisez le bouton "Continuer avec ${provider}" ci-dessous.` });
     }
 
@@ -332,7 +324,7 @@ router.post('/profil', requireAuth, async (req, res) => {
  */
 async function findOrCreateSocialUser({ provider, providerId, email, name, avatarUrl, emailVerified }) {
   const db = getDb();
-  const providerColumn = provider === 'google' ? 'google_id' : 'apple_id';
+  const providerColumn = 'google_id';
 
   // Step 1: Find by provider ID (fastest path for returning social users)
   const byProviderId = await db.query(`SELECT * FROM users WHERE ${providerColumn} = $1 AND is_active = true`, [providerId]);
@@ -477,146 +469,6 @@ router.get('/auth/google/callback', async (req, res) => {
     res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur lors de la connexion avec Google. Veuillez réessayer.' });
   }
 });
-
-// ============================================================
-// APPLE OAUTH
-// ============================================================
-
-/**
- * Generate Apple client secret JWT.
- * Apple requires a dynamically generated JWT signed with the .p8 private key.
- */
-function generateAppleClientSecret() {
-  const privateKey = (process.env.APPLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
-  const teamId = process.env.APPLE_TEAM_ID;
-  const keyId = process.env.APPLE_KEY_ID;
-  const clientId = process.env.APPLE_SERVICES_ID;
-
-  const token = jwt.sign({}, privateKey, {
-    algorithm: 'ES256',
-    expiresIn: '180d',
-    audience: 'https://appleid.apple.com',
-    issuer: teamId,
-    subject: clientId,
-    keyid: keyId
-  });
-
-  return token;
-}
-
-/**
- * Verify Apple's id_token using Apple's JWKS public keys.
- */
-async function verifyAppleIdToken(idToken) {
-  // Decode the token header to get the key ID
-  const decoded = jwt.decode(idToken, { complete: true });
-  if (!decoded) throw new Error('Invalid Apple id_token');
-
-  // Get the signing key from Apple's JWKS
-  const key = await appleJwksClient.getSigningKey(decoded.header.kid);
-  const publicKey = key.getPublicKey();
-
-  // Verify the token
-  const payload = jwt.verify(idToken, publicKey, {
-    algorithms: ['RS256'],
-    issuer: 'https://appleid.apple.com',
-    audience: process.env.APPLE_SERVICES_ID
-  });
-
-  return payload;
-}
-
-// Initiate Apple OAuth flow
-router.get('/auth/apple', socialAuthLimiter, (req, res) => {
-  const state = crypto.randomBytes(32).toString('hex');
-  const nonce = crypto.randomBytes(32).toString('hex');
-  req.session.oauthState = state;
-  req.session.oauthNonce = nonce;
-
-  const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/compte/auth/apple/callback`;
-
-  const params = new URLSearchParams({
-    client_id: process.env.APPLE_SERVICES_ID,
-    redirect_uri: redirectUri,
-    response_type: 'code id_token',
-    response_mode: 'form_post',
-    scope: 'name email',
-    state: state,
-    nonce: crypto.createHash('sha256').update(nonce).digest('hex')
-  });
-
-  res.redirect(`https://appleid.apple.com/auth/authorize?${params.toString()}`);
-});
-
-// Apple OAuth callback (Apple sends POST with form data)
-router.post('/auth/apple/callback', express.urlencoded({ extended: true }), async (req, res) => {
-  try {
-    const { code, state, id_token: idToken, user: userDataStr } = req.body;
-
-    // CSRF: Verify state parameter
-    if (!state || state !== req.session.oauthState) {
-      console.error('Apple OAuth: Invalid state parameter');
-      return res.redirect('/compte/connexion');
-    }
-    delete req.session.oauthState;
-
-    if (!code || !idToken) {
-      return res.redirect('/compte/connexion');
-    }
-
-    // Verify the id_token from Apple
-    const payload = await verifyAppleIdToken(idToken);
-
-    // Verify nonce
-    const expectedNonce = crypto.createHash('sha256').update(req.session.oauthNonce || '').digest('hex');
-    if (payload.nonce !== expectedNonce) {
-      console.error('Apple OAuth: Invalid nonce');
-      return res.redirect('/compte/connexion');
-    }
-    delete req.session.oauthNonce;
-
-    const appleId = payload.sub;
-    const email = payload.email || null;
-    const emailVerified = payload.email_verified === 'true' || payload.email_verified === true;
-
-    // Apple only sends user data (name) on the FIRST sign-in
-    let fullName = 'Utilisateur Apple';
-    if (userDataStr) {
-      try {
-        const userData = typeof userDataStr === 'string' ? JSON.parse(userDataStr) : userDataStr;
-        if (userData.name) {
-          const parts = [userData.name.firstName, userData.name.lastName].filter(Boolean);
-          if (parts.length > 0) fullName = parts.join(' ');
-        }
-      } catch (e) {
-        console.error('Error parsing Apple user data:', e);
-      }
-    }
-
-    // Find or create user
-    const user = await findOrCreateSocialUser({
-      provider: 'apple',
-      providerId: appleId,
-      email,
-      name: fullName,
-      avatarUrl: null,
-      emailVerified
-    });
-
-    // Establish session
-    establishSession(req, res, user, (err, redirectTo) => {
-      if (err) {
-        return res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur serveur.' });
-      }
-      res.redirect(redirectTo);
-    });
-
-  } catch (err) {
-    console.error('Apple OAuth error:', err);
-    res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur lors de la connexion avec Apple. Veuillez réessayer.' });
-  }
-});
-
 // Logout
 router.get('/deconnexion', (req, res) => {
   req.session.destroy(() => {
