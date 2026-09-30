@@ -42,9 +42,26 @@
 </section>
 
 
+<!-- Latest products -->
+<% if (latest.length > 0) { %>
+<section class="section section-alt">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Nouveaux produits</h2>
+      <a href="/boutique" class="section-link">Voir tout</a>
+    </div>
+    <div class="products-grid">
+      <% latest.forEach(product => { %>
+        <%- include('partials/product-card', { product }) %>
+      <% }); %>
+    </div>
+  </div>
+</section>
+<% } %>
+
 <!-- Featured products -->
 <% if (featured.length > 0) { %>
-<section class="section section-alt">
+<section class="section">
   <div class="container">
     <div class="section-header">
       <h2 class="section-title">Produits en vedette</h2>
@@ -61,7 +78,7 @@
 
 <!-- Special offers -->
 <% if (discounted.length > 0) { %>
-<section class="section">
+<section class="section section-alt">
   <div class="container">
     <div class="section-header">
       <h2 class="section-title">🔥 Offres spéciales</h2>
@@ -69,23 +86,6 @@
     </div>
     <div class="products-grid">
       <% discounted.forEach(product => { %>
-        <%- include('partials/product-card', { product }) %>
-      <% }); %>
-    </div>
-  </div>
-</section>
-<% } %>
-
-<!-- Latest products -->
-<% if (latest.length > 0) { %>
-<section class="section section-alt">
-  <div class="container">
-    <div class="section-header">
-      <h2 class="section-title">Nouveaux produits</h2>
-      <a href="/boutique" class="section-link">Voir tout</a>
-    </div>
-    <div class="products-grid">
-      <% latest.forEach(product => { %>
         <%- include('partials/product-card', { product }) %>
       <% }); %>
     </div>
