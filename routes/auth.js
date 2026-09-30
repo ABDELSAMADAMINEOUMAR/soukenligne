@@ -152,7 +152,7 @@ router.post('/mot-de-passe-oublie', forgotLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     const db = getDb();
-    const userRes = await db.query("SELECT id FROM users WHERE email = $1 AND role = 'admin' AND is_active = true", [email]);
+    const userRes = await db.query("SELECT id FROM users WHERE email = $1 AND is_active = true", [email]);
     const user = userRes.rows[0];
 
     if (user) {
@@ -224,11 +224,7 @@ router.post('/reinitialiser-mot-de-passe', resetLimiter, async (req, res) => {
       return res.render('customer/reset-password', { pageTitle: 'Réinitialiser le mot de passe', error: 'Le lien est invalide ou a expiré.', token });
     }
 
-    // Verify it is an admin
-    const userRes = await db.query("SELECT id FROM users WHERE id = $1 AND role = 'admin'", [resetRecord.user_id]);
-    if (userRes.rows.length === 0) {
-      return res.render('customer/reset-password', { pageTitle: 'Réinitialiser le mot de passe', error: 'Non autorisé.', token });
-    }
+    // Admin role restriction removed to allow customer resets
 
     const newHash = bcrypt.hashSync(password, 10);
     await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, resetRecord.user_id]);
