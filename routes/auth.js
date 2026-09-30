@@ -4,8 +4,24 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
+const { OAuth2Client } = require('google-auth-library');
+const jwt = require('jsonwebtoken');
+const jwksClient = require('jwks-rsa');
 const { getDb } = require('../db/init');
 const { requireAuth } = require('../middleware/auth');
+
+// Google OAuth client
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET
+);
+
+// Apple JWKS client for verifying Apple id_tokens
+const appleJwksClient = jwksClient({
+  jwksUri: 'https://appleid.apple.com/auth/keys',
+  cache: true,
+  cacheMaxAge: 86400000 // 24 hours
+});
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -38,7 +54,17 @@ router.post('/connexion', loginLimiter, async (req, res) => {
     const userRes = await db.query('SELECT * FROM users WHERE email = $1 AND is_active = true', [email]);
     const user = userRes.rows[0];
     
-    if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    if (!user) {
+      return res.render('customer/login', { pageTitle: 'Connexion', error: 'Email ou mot de passe incorrect.' });
+    }
+
+    // Social-only users don't have a password
+    if (!user.password_hash) {
+      const provider = user.auth_provider === 'apple' ? 'Apple' : 'Google';
+      return res.render('customer/login', { pageTitle: 'Connexion', error: `Ce compte utilise ${provider} pour se connecter. Utilisez le bouton "Continuer avec ${provider}" ci-dessous.` });
+    }
+
+    if (!bcrypt.compareSync(password, user.password_hash)) {
       return res.render('customer/login', { pageTitle: 'Connexion', error: 'Email ou mot de passe incorrect.' });
     }
 
@@ -293,6 +319,301 @@ router.post('/profil', requireAuth, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.redirect('/compte');
+  }
+});
+
+// ============================================================
+// SOCIAL AUTHENTICATION
+// ============================================================
+
+/**
+ * Find an existing user by social provider ID or email, or create a new one.
+ * Handles account linking when an existing email-based account matches.
+ */
+async function findOrCreateSocialUser({ provider, providerId, email, name, avatarUrl, emailVerified }) {
+  const db = getDb();
+  const providerColumn = provider === 'google' ? 'google_id' : 'apple_id';
+
+  // Step 1: Find by provider ID (fastest path for returning social users)
+  const byProviderId = await db.query(`SELECT * FROM users WHERE ${providerColumn} = $1 AND is_active = true`, [providerId]);
+  if (byProviderId.rows[0]) {
+    return byProviderId.rows[0];
+  }
+
+  // Step 2: Find by email (account linking for existing password-based accounts)
+  if (email && emailVerified) {
+    const byEmail = await db.query('SELECT * FROM users WHERE email = $1 AND is_active = true', [email]);
+    if (byEmail.rows[0]) {
+      // Link the social account to the existing user
+      await db.query(
+        `UPDATE users SET ${providerColumn} = $1, avatar_url = COALESCE(avatar_url, $2), updated_at = CURRENT_TIMESTAMP WHERE id = $3`,
+        [providerId, avatarUrl || null, byEmail.rows[0].id]
+      );
+      const updated = await db.query('SELECT * FROM users WHERE id = $1', [byEmail.rows[0].id]);
+      return updated.rows[0];
+    }
+  }
+
+  // Step 3: Create a new user (no password, social-only)
+  const result = await db.query(
+    `INSERT INTO users (full_name, email, ${providerColumn}, auth_provider, avatar_url)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [name || 'Utilisateur', email, providerId, provider, avatarUrl || null]
+  );
+  return result.rows[0];
+}
+
+/**
+ * Establish a session for the authenticated user.
+ * Preserves cart data across session.regenerate().
+ */
+function establishSession(req, res, user, callback) {
+  // Preserve cart before regenerating
+  const cart = req.session.cart || [];
+  const returnTo = req.session.returnTo;
+
+  req.session.regenerate((err) => {
+    if (err) {
+      console.error('Session regenerate error:', err);
+      return callback(err);
+    }
+    req.session.userId = user.id;
+    req.session.userRole = user.role;
+    req.session.userName = user.full_name;
+    req.session.cart = cart; // Restore cart
+
+    let redirectTo = returnTo || '/compte';
+    if (user.role === 'admin') {
+      redirectTo = '/admin';
+    }
+    callback(null, redirectTo);
+  });
+}
+
+// Rate limiter for social auth initiation (prevent abuse)
+const socialAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  handler: (req, res) => res.redirect('/compte/connexion')
+});
+
+// ============================================================
+// GOOGLE OAUTH
+// ============================================================
+
+// Initiate Google OAuth flow
+router.get('/auth/google', socialAuthLimiter, (req, res) => {
+  const state = crypto.randomBytes(32).toString('hex');
+  req.session.oauthState = state;
+
+  const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/compte/auth/google/callback`;
+
+  const authUrl = googleClient.generateAuthUrl({
+    access_type: 'offline',
+    scope: ['openid', 'email', 'profile'],
+    state: state,
+    redirect_uri: redirectUri,
+    prompt: 'select_account'
+  });
+
+  res.redirect(authUrl);
+});
+
+// Google OAuth callback
+router.get('/auth/google/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+
+    // CSRF: Verify state parameter
+    if (!state || state !== req.session.oauthState) {
+      console.error('Google OAuth: Invalid state parameter');
+      return res.redirect('/compte/connexion');
+    }
+    delete req.session.oauthState;
+
+    if (!code) {
+      // User denied consent or error occurred
+      return res.redirect('/compte/connexion');
+    }
+
+    const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/compte/auth/google/callback`;
+
+    // Exchange authorization code for tokens
+    const { tokens } = await googleClient.getToken({ code, redirect_uri: redirectUri });
+
+    // Verify the id_token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const googleId = payload.sub;
+    const email = payload.email;
+    const name = payload.name || payload.email;
+    const avatarUrl = payload.picture || null;
+    const emailVerified = payload.email_verified === true;
+
+    // Find or create user
+    const user = await findOrCreateSocialUser({
+      provider: 'google',
+      providerId: googleId,
+      email,
+      name,
+      avatarUrl,
+      emailVerified
+    });
+
+    // Establish session
+    establishSession(req, res, user, (err, redirectTo) => {
+      if (err) {
+        return res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur serveur.' });
+      }
+      res.redirect(redirectTo);
+    });
+
+  } catch (err) {
+    console.error('Google OAuth error:', err);
+    res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur lors de la connexion avec Google. Veuillez réessayer.' });
+  }
+});
+
+// ============================================================
+// APPLE OAUTH
+// ============================================================
+
+/**
+ * Generate Apple client secret JWT.
+ * Apple requires a dynamically generated JWT signed with the .p8 private key.
+ */
+function generateAppleClientSecret() {
+  const privateKey = (process.env.APPLE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+  const teamId = process.env.APPLE_TEAM_ID;
+  const keyId = process.env.APPLE_KEY_ID;
+  const clientId = process.env.APPLE_SERVICES_ID;
+
+  const token = jwt.sign({}, privateKey, {
+    algorithm: 'ES256',
+    expiresIn: '180d',
+    audience: 'https://appleid.apple.com',
+    issuer: teamId,
+    subject: clientId,
+    keyid: keyId
+  });
+
+  return token;
+}
+
+/**
+ * Verify Apple's id_token using Apple's JWKS public keys.
+ */
+async function verifyAppleIdToken(idToken) {
+  // Decode the token header to get the key ID
+  const decoded = jwt.decode(idToken, { complete: true });
+  if (!decoded) throw new Error('Invalid Apple id_token');
+
+  // Get the signing key from Apple's JWKS
+  const key = await appleJwksClient.getSigningKey(decoded.header.kid);
+  const publicKey = key.getPublicKey();
+
+  // Verify the token
+  const payload = jwt.verify(idToken, publicKey, {
+    algorithms: ['RS256'],
+    issuer: 'https://appleid.apple.com',
+    audience: process.env.APPLE_SERVICES_ID
+  });
+
+  return payload;
+}
+
+// Initiate Apple OAuth flow
+router.get('/auth/apple', socialAuthLimiter, (req, res) => {
+  const state = crypto.randomBytes(32).toString('hex');
+  const nonce = crypto.randomBytes(32).toString('hex');
+  req.session.oauthState = state;
+  req.session.oauthNonce = nonce;
+
+  const redirectUri = `${process.env.APP_URL || 'http://localhost:3000'}/compte/auth/apple/callback`;
+
+  const params = new URLSearchParams({
+    client_id: process.env.APPLE_SERVICES_ID,
+    redirect_uri: redirectUri,
+    response_type: 'code id_token',
+    response_mode: 'form_post',
+    scope: 'name email',
+    state: state,
+    nonce: crypto.createHash('sha256').update(nonce).digest('hex')
+  });
+
+  res.redirect(`https://appleid.apple.com/auth/authorize?${params.toString()}`);
+});
+
+// Apple OAuth callback (Apple sends POST with form data)
+router.post('/auth/apple/callback', express.urlencoded({ extended: true }), async (req, res) => {
+  try {
+    const { code, state, id_token: idToken, user: userDataStr } = req.body;
+
+    // CSRF: Verify state parameter
+    if (!state || state !== req.session.oauthState) {
+      console.error('Apple OAuth: Invalid state parameter');
+      return res.redirect('/compte/connexion');
+    }
+    delete req.session.oauthState;
+
+    if (!code || !idToken) {
+      return res.redirect('/compte/connexion');
+    }
+
+    // Verify the id_token from Apple
+    const payload = await verifyAppleIdToken(idToken);
+
+    // Verify nonce
+    const expectedNonce = crypto.createHash('sha256').update(req.session.oauthNonce || '').digest('hex');
+    if (payload.nonce !== expectedNonce) {
+      console.error('Apple OAuth: Invalid nonce');
+      return res.redirect('/compte/connexion');
+    }
+    delete req.session.oauthNonce;
+
+    const appleId = payload.sub;
+    const email = payload.email || null;
+    const emailVerified = payload.email_verified === 'true' || payload.email_verified === true;
+
+    // Apple only sends user data (name) on the FIRST sign-in
+    let fullName = 'Utilisateur Apple';
+    if (userDataStr) {
+      try {
+        const userData = typeof userDataStr === 'string' ? JSON.parse(userDataStr) : userDataStr;
+        if (userData.name) {
+          const parts = [userData.name.firstName, userData.name.lastName].filter(Boolean);
+          if (parts.length > 0) fullName = parts.join(' ');
+        }
+      } catch (e) {
+        console.error('Error parsing Apple user data:', e);
+      }
+    }
+
+    // Find or create user
+    const user = await findOrCreateSocialUser({
+      provider: 'apple',
+      providerId: appleId,
+      email,
+      name: fullName,
+      avatarUrl: null,
+      emailVerified
+    });
+
+    // Establish session
+    establishSession(req, res, user, (err, redirectTo) => {
+      if (err) {
+        return res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur serveur.' });
+      }
+      res.redirect(redirectTo);
+    });
+
+  } catch (err) {
+    console.error('Apple OAuth error:', err);
+    res.render('customer/login', { pageTitle: 'Connexion', error: 'Erreur lors de la connexion avec Apple. Veuillez réessayer.' });
   }
 });
 

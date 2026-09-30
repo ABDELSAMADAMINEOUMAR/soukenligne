@@ -265,6 +265,13 @@ body.auth-page {
   align-items: center;
   gap: 8px;
   cursor: pointer;
+  text-decoration: none;
+  color: #333;
+  transition: opacity 0.2s, box-shadow 0.2s;
+}
+.social-btn:hover {
+  opacity: 0.85;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 .social-btn.apple {
   background: #000;

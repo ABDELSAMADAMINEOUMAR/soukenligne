@@ -13,6 +13,15 @@ async function runMigrations() {
     await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_notes TEXT');
     await db.query('ALTER TABLE orders ADD COLUMN IF NOT EXISTS admin_seen_cancellation BOOLEAN DEFAULT false');
     
+    // Social authentication columns
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id TEXT UNIQUE');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_provider TEXT DEFAULT \'local\'');
+    await db.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT');
+    await db.query('ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id)');
+    await db.query('CREATE INDEX IF NOT EXISTS idx_users_apple_id ON users(apple_id)');
+    
     console.log('➜ Running data migrations (UPDATE)...');
     // Migrate old SoukEnLigne branding to Baron Technology
     await db.query("UPDATE settings SET value = 'Baron Technology' WHERE key = 'store_name' AND value = 'SoukEnLigne'");
