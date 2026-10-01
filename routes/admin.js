@@ -389,7 +389,13 @@ router.post('/categories/modifier/:id', async (req, res) => {
 router.post('/categories/supprimer/:id', async (req, res) => {
   try {
     const db = getDb();
-    await db.query('UPDATE categories SET is_active = false WHERE id = $1', [req.params.id]);
+    await db.query('BEGIN');
+    // Prevent foreign key constraint errors
+    await db.query('UPDATE categories SET parent_id = NULL WHERE parent_id = $1', [req.params.id]);
+    await db.query('UPDATE products SET category_id = NULL WHERE category_id = $1', [req.params.id]);
+    // Delete the category
+    await db.query('DELETE FROM categories WHERE id = $1', [req.params.id]);
+    await db.query('COMMIT');
     res.redirect('/admin/categories');
   } catch (err) {
     console.error(err);

@@ -21,7 +21,7 @@
             <button type="button" class="btn btn-sm btn-outline edit-cat-btn" data-id="<%= cat.id %>" data-name="<%= cat.name %>" data-desc="<%= cat.description || '' %>" data-active="<%= cat.is_active %>">Éditer</button>
             <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" class="delete-cat-form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-              <button type="submit" class="btn btn-sm btn-danger">Désactiver</button>
+              <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
             </form>
           </td>
         </tr>
@@ -94,7 +94,7 @@ document.querySelectorAll('.edit-cat-btn').forEach(function(btn) {
 // Event listeners for delete forms
 document.querySelectorAll('.delete-cat-form').forEach(function(form) {
   form.addEventListener('submit', function(e) {
-    if (!confirm('Êtes-vous sûr de vouloir désactiver cette catégorie ?')) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer définitivement cette catégorie ?')) {
       e.preventDefault();
     }
   });
