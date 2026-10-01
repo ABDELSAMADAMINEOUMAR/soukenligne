@@ -87,10 +87,7 @@
         <% product.images.forEach(img => { %>
         <div class="image-item">
           <img src="<%= img.image_path %>" alt="">
-          <form action="/admin/produits/supprimer-image/<%= img.id %>" method="POST" style="position:absolute;top:4px;right:4px" class="delete-img-form">
-  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-            <button type="submit" class="img-delete-btn" title="Supprimer">×</button>
-          </form>
+          <button type="submit" form="delete-img-<%= img.id %>" class="img-delete-btn" title="Supprimer" style="position:absolute;top:4px;right:4px">×</button>
         </div>
         <% }); %>
       </div>
@@ -114,6 +111,14 @@
       <button type="submit" id="submit-btn" class="btn btn-primary"><%= product && product.id ? 'Enregistrer' : 'Ajouter le produit' %></button>
     </div>
   </form>
+
+  <% if (product && product.images && product.images.length > 0) { %>
+    <% product.images.forEach(img => { %>
+      <form id="delete-img-<%= img.id %>" action="/admin/produits/supprimer-image/<%= img.id %>" method="POST" class="delete-img-form" style="display: none;">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      </form>
+    <% }); %>
+  <% } %>
 </div>
 
 <script nonce="<%= nonce %>">
@@ -229,12 +234,22 @@ form.addEventListener('submit', async function(e) {
       }
     });
     
-    // 3. Remove file input so it is not sent to Express
-    fileInput.remove();
+    // 3. Clear file input so files are not sent to Express (bypassing payload limits),
+    // but keep the input in the DOM to avoid breaking any layout.
+    // By setting value to empty, files.length becomes 0, so our submit listener 
+    // will just allow normal submission on the next pass.
+    fileInput.value = '';
     
-    // 4. Submit form
+    // 4. Submit form cleanly using the button to preserve native behavior
     helpText.textContent = 'Enregistrement du produit...';
-    form.submit();
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+    
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit(submitBtn);
+    } else {
+      submitBtn.click();
+    }
   } catch (err) {
     console.error(err);
     alert(err.message || 'Une erreur est survenue lors de l\'upload des images.');
