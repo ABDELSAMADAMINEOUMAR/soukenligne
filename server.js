@@ -52,7 +52,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https://cdn.jsdelivr.net"].concat(supabaseHost ? [`https://${supabaseHost}`] : []),
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'"].concat(supabaseHost ? [`https://${supabaseHost}`] : []),
       formAction: ["'self'"],
       frameAncestors: ["'none'"]
     }
