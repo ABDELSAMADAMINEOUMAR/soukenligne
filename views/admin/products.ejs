@@ -87,6 +87,20 @@
   </div>
 </div>
 
+<div id="delete-confirm-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(8px); opacity: 0; transition: opacity 0.3s ease;">
+  <div style="background: white; padding: 2.5rem; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: translateY(20px) scale(0.95); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+    <div style="width: 64px; height: 64px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem;">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+    </div>
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 1.25rem; font-weight: 700;">Supprimer ce produit ?</h2>
+    <p style="color: #64748b; margin-bottom: 2rem; font-size: 0.95rem; line-height: 1.5;">Cette action est définitive et irréversible. Toutes les données liées à ce produit seront perdues.</p>
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+      <button type="button" id="delete-cancel-btn" class="btn btn-outline" style="flex: 1; padding: 0.75rem; border-color: #cbd5e1; color: #475569;">Annuler</button>
+      <button type="button" id="delete-confirm-btn" class="btn btn-danger" style="flex: 1; padding: 0.75rem; background: #ef4444; border: none; box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);">Oui, supprimer</button>
+    </div>
+  </div>
+</div>
+
 <script nonce="<%= nonce %>">
 (function() {
   function openQuickView(product) {
@@ -129,7 +143,7 @@
     document.getElementById('quick-view-modal').style.display = 'none';
   }
 
-  // Quick View buttons — event delegation
+  // Quick View buttons
   document.querySelectorAll('.quick-view-btn').forEach(function(btn) {
     btn.addEventListener('click', function() {
       var product = JSON.parse(this.getAttribute('data-product'));
@@ -137,21 +151,51 @@
     });
   });
 
-  // Close button
   document.getElementById('qv-close-btn').addEventListener('click', closeQuickView);
-
-  // Close when clicking outside the card
   document.getElementById('quick-view-modal').addEventListener('click', function(e) {
     if (e.target === this) closeQuickView();
   });
 
-  // Delete confirmation — event delegation
+  // Custom Delete Modal Logic
+  var formToSubmit = null;
+  var deleteModal = document.getElementById('delete-confirm-modal');
+  var modalContent = deleteModal.querySelector('div');
+
+  function closeDeleteModal() {
+    deleteModal.style.opacity = '0';
+    modalContent.style.transform = 'translateY(20px) scale(0.95)';
+    setTimeout(function() {
+      deleteModal.style.display = 'none';
+      formToSubmit = null;
+    }, 300);
+  }
+
   document.querySelectorAll('.delete-product-form').forEach(function(form) {
     form.addEventListener('submit', function(e) {
-      if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.')) {
-        e.preventDefault();
-      }
+      e.preventDefault();
+      formToSubmit = this;
+      deleteModal.style.display = 'flex';
+      // Trigger reflow
+      void deleteModal.offsetWidth;
+      deleteModal.style.opacity = '1';
+      modalContent.style.transform = 'translateY(0) scale(1)';
     });
+  });
+
+  document.getElementById('delete-cancel-btn').addEventListener('click', closeDeleteModal);
+  
+  deleteModal.addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+
+  document.getElementById('delete-confirm-btn').addEventListener('click', function() {
+    if (formToSubmit) {
+      var btn = this;
+      btn.textContent = 'Suppression...';
+      btn.style.opacity = '0.7';
+      btn.style.pointerEvents = 'none';
+      formToSubmit.submit();
+    }
   });
 })();
 </script>
