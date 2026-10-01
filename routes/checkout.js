@@ -77,10 +77,14 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
       return res.redirect('/commande?error=1');
     }
 
+    // Anti-replay: Take ownership of cart
+    const userCart = [...req.session.cart];
+    req.session.cart = [];
+
     // Calculate totals from cart
     let subtotal = 0;
     const cartItems = [];
-    for (const item of req.session.cart) {
+    for (const item of userCart) {
       const productRes = await db.query('SELECT * FROM products WHERE id = $1 AND status = $2 AND is_available = true', [item.product_id, 'active']);
       const product = productRes.rows[0];
       if (!product) continue;
@@ -91,7 +95,10 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
       cartItems.push({ product, price, quantity: qty });
     }
 
-    if (cartItems.length === 0) return res.redirect('/panier');
+    if (cartItems.length === 0) {
+      req.session.cart = userCart;
+      return res.redirect('/panier');
+    }
 
     // Get delivery fee and city name from zone
     const settings = await getSettings();
@@ -108,51 +115,64 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
     const total = subtotal + deliveryFee;
     const orderNumber = generateOrderNumber();
 
-    await db.query('BEGIN');
+    const client = await db.connect();
+    let orderObj;
 
-    let finalUserId = req.session.userId;
-    if (!finalUserId) {
-      const guestEmail = 'guest_' + Date.now() + '@barontechnology.td';
-      const guestRes = await db.query(
-        "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, 'guest') RETURNING id",
-        [delivery_full_name, guestEmail, delivery_phone, 'GUEST_NO_LOGIN']
-      );
-      finalUserId = guestRes.rows[0].id;
-      req.session.userId = finalUserId;
-      req.session.userRole = 'guest';
-    }
+    try {
+      await client.query('BEGIN');
 
-    const orderRes = await db.query(`
-      INSERT INTO orders (order_number, user_id, subtotal, delivery_fee, total, payment_method, status,
-        delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes)
-      VALUES ($1, $2, $3, $4, $5, 'cash_on_delivery', 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING *
-    `, [
-      orderNumber, finalUserId, subtotal, deliveryFee, total,
-      delivery_full_name, delivery_phone, finalCity, delivery_neighborhood,
-      delivery_address, delivery_landmark || null, delivery_notes || null
-    ]);
-    
-    const orderObj = orderRes.rows[0];
-    const orderId = orderObj.id;
+      let finalUserId = req.session.userId;
+      if (!finalUserId) {
+        const guestEmail = 'guest_' + Date.now() + '@barontechnology.td';
+        const guestRes = await client.query(
+          "INSERT INTO users (full_name, email, phone, password_hash, role) VALUES ($1, $2, $3, $4, 'guest') RETURNING id",
+          [delivery_full_name, guestEmail, delivery_phone, 'GUEST_NO_LOGIN']
+        );
+        finalUserId = guestRes.rows[0].id;
+        req.session.userId = finalUserId;
+        req.session.userRole = 'guest';
+      }
 
-    for (const item of cartItems) {
-      await db.query(`
-        INSERT INTO order_items (order_id, product_id, product_name, product_price, quantity, subtotal)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [orderId, item.product.id, item.product.name, item.price, item.quantity, item.price * item.quantity]);
+      const orderRes = await client.query(`
+        INSERT INTO orders (order_number, user_id, subtotal, delivery_fee, total, payment_method, status,
+          delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes)
+        VALUES ($1, $2, $3, $4, $5, 'cash_on_delivery', 'pending', $6, $7, $8, $9, $10, $11, $12) RETURNING *
+      `, [
+        orderNumber, finalUserId, subtotal, deliveryFee, total,
+        delivery_full_name, delivery_phone, finalCity, delivery_neighborhood,
+        delivery_address, delivery_landmark || null, delivery_notes || null
+      ]);
       
-      await db.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2', [item.quantity, item.product.id]);
-    }
+      orderObj = orderRes.rows[0];
+      const orderId = orderObj.id;
 
-    // Save address
-    const addrRes = await db.query('SELECT id FROM addresses WHERE user_id = $1', [finalUserId]);
-    if (addrRes.rows.length === 0) {
-      await db.query(`INSERT INTO addresses (user_id, full_name, phone, city, neighborhood, address_line, landmark, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7, true)`, 
-        [finalUserId, delivery_full_name, delivery_phone, finalCity, delivery_neighborhood, delivery_address, delivery_landmark || null]);
-    }
+      for (const item of cartItems) {
+        await client.query(`
+          INSERT INTO order_items (order_id, product_id, product_name, product_price, quantity, subtotal)
+          VALUES ($1, $2, $3, $4, $5, $6)
+        `, [orderId, item.product.id, item.product.name, item.price, item.quantity, item.price * item.quantity]);
+        
+        // Atomic stock deduction
+        const updateRes = await client.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2 AND stock_quantity >= $1 RETURNING id', [item.quantity, item.product.id]);
+        if (updateRes.rows.length === 0) {
+          throw new Error('INSUFFICIENT_STOCK');
+        }
+      }
 
-    await db.query('COMMIT');
-    req.session.cart = [];
+      // Save address
+      const addrRes = await client.query('SELECT id FROM addresses WHERE user_id = $1', [finalUserId]);
+      if (addrRes.rows.length === 0) {
+        await client.query(`INSERT INTO addresses (user_id, full_name, phone, city, neighborhood, address_line, landmark, is_default) VALUES ($1, $2, $3, $4, $5, $6, $7, true)`, 
+          [finalUserId, delivery_full_name, delivery_phone, finalCity, delivery_neighborhood, delivery_address, delivery_landmark || null]);
+      }
+
+      await client.query('COMMIT');
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (e) { console.error('Rollback failed:', e); }
+      throw err; // Handled by outer catch
+    } finally {
+      client.release();
+    }
     
     // Get store URL
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
@@ -165,6 +185,12 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
 
   } catch (err) {
     console.error('Order error:', err);
+    // Restore cart on failure
+    if (err.message === 'INSUFFICIENT_STOCK') {
+      req.session.cart = req.session.cart || [];
+      return res.redirect('/panier?error=stock');
+    }
+    req.session.cart = req.session.cart || [];
     res.redirect('/commande?error=1');
   }
 });

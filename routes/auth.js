@@ -299,23 +299,38 @@ router.get('/commande/:orderNumber', requireAuth, async (req, res) => {
 router.post('/commande/:orderNumber/annuler', requireAuth, async (req, res) => {
   try {
     const db = getDb();
+    const client = await db.connect();
+    let isCancelled = false;
     
-    // Verify order exists, belongs to user, and is pending
-    const orderRes = await db.query('SELECT id, status FROM orders WHERE order_number = $1 AND user_id = $2', [req.params.orderNumber, req.session.userId]);
-    const order = orderRes.rows[0];
-    
-    if (!order || order.status !== 'pending') {
-      return res.redirect(`/compte/commande/${req.params.orderNumber}`);
-    }
+    try {
+      await client.query('BEGIN');
 
-    const itemsRes = await db.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [order.id]);
-    
-    await db.query('BEGIN');
-    await db.query('UPDATE orders SET status = $1, admin_seen_cancellation = false, updated_at = CURRENT_TIMESTAMP WHERE id = $2', ['cancelled', order.id]);
-    for (const item of itemsRes.rows) {
-      await db.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
+      // Atomic cancellation
+      const updateRes = await client.query(`
+        UPDATE orders 
+        SET status = 'cancelled', admin_seen_cancellation = false, updated_at = CURRENT_TIMESTAMP 
+        WHERE order_number = $1 AND user_id = $2 AND status = 'pending'
+        RETURNING id
+      `, [req.params.orderNumber, req.session.userId]);
+
+      if (updateRes.rows.length > 0) {
+        const orderId = updateRes.rows[0].id;
+        const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
+        
+        for (const item of itemsRes.rows) {
+          await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
+        }
+        isCancelled = true;
+      }
+      
+      await client.query('COMMIT');
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch (e) { console.error('Rollback failed:', e); }
+      console.error(err);
+      return res.redirect(`/compte`);
+    } finally {
+      client.release();
     }
-    await db.query('COMMIT');
 
     res.redirect(`/compte/commande/${req.params.orderNumber}`);
   } catch (err) {

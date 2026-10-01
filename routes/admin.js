@@ -454,10 +454,55 @@ router.get('/commandes/:id', async (req, res) => {
 router.post('/commandes/:id/statut', async (req, res) => {
   try {
     const { status, admin_notes } = req.body;
+    const orderId = parseInt(req.params.id, 10);
+    const validStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
+    
+    if (!validStatuses.includes(status)) {
+      return res.redirect(`/admin/commandes/${orderId}`);
+    }
+
     const db = getDb();
-    await db.query('UPDATE orders SET status = $1, delivery_notes = $2, admin_seen_cancellation = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
-      [status, admin_notes || null, parseInt(req.params.id, 10)]);
-    res.redirect(`/admin/commandes/${req.params.id}`);
+    const client = await db.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      const orderRes = await client.query('SELECT status FROM orders WHERE id = $1 FOR UPDATE', [orderId]);
+      if (orderRes.rows.length > 0) {
+        const currentStatus = orderRes.rows[0].status;
+
+        if (currentStatus !== status) {
+          if (status === 'cancelled' && currentStatus !== 'cancelled') {
+            // Restore stock
+            const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
+            for (const item of itemsRes.rows) {
+              await client.query('UPDATE products SET stock_quantity = stock_quantity + $1 WHERE id = $2', [item.quantity, item.product_id]);
+            }
+          } else if (currentStatus === 'cancelled' && status !== 'cancelled') {
+            // Deduct stock again atomically
+            const itemsRes = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
+            for (const item of itemsRes.rows) {
+              const updateRes = await client.query('UPDATE products SET stock_quantity = stock_quantity - $1 WHERE id = $2 AND stock_quantity >= $1 RETURNING id', [item.quantity, item.product_id]);
+              if (updateRes.rows.length === 0) {
+                throw new Error('INSUFFICIENT_STOCK');
+              }
+            }
+          }
+
+          await client.query('UPDATE orders SET status = $1, delivery_notes = $2, admin_seen_cancellation = true, updated_at = CURRENT_TIMESTAMP WHERE id = $3',
+            [status, admin_notes || null, orderId]);
+        }
+      }
+      
+      await client.query('COMMIT');
+    } catch (err) {
+      try { await client.query('ROLLBACK'); } catch(e){}
+      console.error('Admin order update error:', err);
+    } finally {
+      client.release();
+    }
+    
+    res.redirect(`/admin/commandes/${orderId}`);
   } catch (err) {
     console.error(err);
     res.redirect(`/admin/commandes/${req.params.id}`);
