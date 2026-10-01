@@ -164,9 +164,40 @@ router.post('/produits/ajouter', async (req, res) => {
   const slug = slugify(name, { lower: true, strict: true }) + '-' + Math.random().toString(36).slice(2, 6);
 
   try {
+    // 1. Validate images first
+    const paths = uploaded_images ? (Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images]) : [];
+    const validImages = [];
+    
+    if (paths.length > 0 && supabase) {
+      for (let i = 0; i < paths.length; i++) {
+        const tempPath = paths[i];
+        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
+        
+        try {
+          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
+          if (!resp.ok) throw new Error("Fetch failed");
+          
+          const arrayBuffer = await resp.arrayBuffer();
+          const safeMime = getSafeMimeType(Buffer.from(arrayBuffer));
+          
+          if (!safeMime) {
+            // Invalid image detected! Clean up ALL temporary files and abort.
+            await supabase.storage.from('products').remove(paths);
+            throw new Error('Une des images est invalide ou corrompue.');
+          }
+          validImages.push({ tempPath, ext: safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif' });
+        } catch (fetchErr) {
+          await supabase.storage.from('products').remove(paths);
+          throw new Error('Erreur lors de la validation des images.');
+        }
+      }
+    }
+
+    // 2. Insert product
     const result = await db.query(`
       INSERT INTO products (name, slug, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING id
     `, [
       name, slug, description, short_description || null, parseInt(price), discount_price ? parseInt(discount_price) : null,
       category_id ? parseInt(category_id) : null, brand || null, sku || null,
@@ -176,43 +207,18 @@ router.post('/produits/ajouter', async (req, res) => {
 
     const productId = result.rows[0].id;
 
-    if (uploaded_images && supabase) {
-      const paths = Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images];
+    // 3. Move images and insert into DB
+    if (validImages.length > 0 && supabase) {
       let order = 0;
-      
-      for (let i = 0; i < paths.length; i++) {
-        const tempPath = paths[i];
-        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
+      for (const img of validImages) {
+        const finalFilename = `prod_${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${img.ext}`;
+        const { data, error } = await supabase.storage.from('products').move(img.tempPath, finalFilename);
         
-        try {
-          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
-          if (!resp.ok) continue;
-          
-          const arrayBuffer = await resp.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const safeMime = getSafeMimeType(buffer);
-          
-          if (!safeMime) {
-            console.error("Invalid magic bytes for file:", tempPath);
-            await supabase.storage.from('products').remove([tempPath]);
-            continue;
-          }
-
-          const ext = safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif';
-          const finalFilename = `prod_${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-          
-          const { data, error } = await supabase.storage.from('products').move(tempPath, finalFilename);
-          
-          if (!error) {
-            const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
-            await db.query('INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES ($1, $2, $3, $4)', 
-              [productId, publicData.publicUrl, order === 0 ? true : false, order]);
-            order++;
-          } else {
-            console.error("Supabase move error:", error);
-          }
-        } catch (fetchErr) {
-          console.error("Fetch magic bytes error:", fetchErr);
+        if (!error) {
+          const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
+          await db.query('INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES ($1, $2, $3, $4)', 
+            [productId, publicData.publicUrl, order === 0 ? true : false, order]);
+          order++;
         }
       }
     }
@@ -247,6 +253,36 @@ router.post('/produits/modifier/:id', async (req, res) => {
     const db = getDb();
     const { name, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description, uploaded_images } = req.body;
 
+    // 1. Validate images first
+    const paths = uploaded_images ? (Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images]) : [];
+    const validImages = [];
+    
+    if (paths.length > 0 && supabase) {
+      for (let i = 0; i < paths.length; i++) {
+        const tempPath = paths[i];
+        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
+        
+        try {
+          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
+          if (!resp.ok) throw new Error("Fetch failed");
+          
+          const arrayBuffer = await resp.arrayBuffer();
+          const safeMime = getSafeMimeType(Buffer.from(arrayBuffer));
+          
+          if (!safeMime) {
+            // Invalid image detected! Clean up ALL temporary files and abort.
+            await supabase.storage.from('products').remove(paths);
+            throw new Error('Une des images est invalide ou corrompue.');
+          }
+          validImages.push({ tempPath, ext: safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif' });
+        } catch (fetchErr) {
+          await supabase.storage.from('products').remove(paths);
+          throw new Error('Erreur lors de la validation des images.');
+        }
+      }
+    }
+
+    // 2. Update product
     await db.query(`
       UPDATE products SET name = $1, description = $2, short_description = $3, price = $4, discount_price = $5,
         category_id = $6, brand = $7, sku = $8, stock_quantity = $9, is_available = $10, is_featured = $11,
@@ -259,41 +295,19 @@ router.post('/produits/modifier/:id', async (req, res) => {
       meta_title || null, meta_description || null, req.params.id
     ]);
 
-    if (uploaded_images && supabase) {
-      const paths = Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images];
+    // 3. Move images and insert into DB
+    if (validImages.length > 0 && supabase) {
       const maxOrderRes = await db.query('SELECT MAX(sort_order) as m FROM product_images WHERE product_id = $1', [req.params.id]);
       let order = (maxOrderRes.rows[0] && maxOrderRes.rows[0].m !== null) ? maxOrderRes.rows[0].m + 1 : 0;
       
-      for (let i = 0; i < paths.length; i++) {
-        const tempPath = paths[i];
-        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
+      for (const img of validImages) {
+        const finalFilename = `prod_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${img.ext}`;
+        const { data, error } = await supabase.storage.from('products').move(img.tempPath, finalFilename);
         
-        try {
-          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
-          if (!resp.ok) continue;
-          
-          const arrayBuffer = await resp.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const safeMime = getSafeMimeType(buffer);
-          
-          if (!safeMime) {
-            console.error("Invalid magic bytes for file:", tempPath);
-            await supabase.storage.from('products').remove([tempPath]);
-            continue;
-          }
-
-          const ext = safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif';
-          const finalFilename = `prod_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
-          
-          const { data, error } = await supabase.storage.from('products').move(tempPath, finalFilename);
-          
-          if (!error) {
-            const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
-            await db.query('INSERT INTO product_images (product_id, image_path, sort_order) VALUES ($1, $2, $3)', 
-              [req.params.id, publicData.publicUrl, order++]);
-          }
-        } catch (fetchErr) {
-          console.error("Fetch magic bytes error:", fetchErr);
+        if (!error) {
+          const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
+          await db.query('INSERT INTO product_images (product_id, image_path, sort_order) VALUES ($1, $2, $3)', 
+            [req.params.id, publicData.publicUrl, order++]);
         }
       }
     }
