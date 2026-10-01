@@ -157,9 +157,13 @@ form.addEventListener('submit', async function(e) {
 
   e.preventDefault();
   
-  const originalText = submitBtn.textContent;
-  submitBtn.textContent = 'Envoi des images en cours...';
-  submitBtn.disabled = true;
+  if (window.ButtonLoader) {
+    window.ButtonLoader.start(submitBtn, 'Envoi des images en cours...');
+  } else {
+    submitBtn.textContent = 'Envoi des images en cours...';
+    submitBtn.disabled = true;
+  }
+  
   helpText.style.color = '#eab308';
   helpText.textContent = 'Création des accès sécurisés...';
   
@@ -242,8 +246,7 @@ form.addEventListener('submit', async function(e) {
     
     // 4. Submit form cleanly using the button to preserve native behavior
     helpText.textContent = 'Enregistrement du produit...';
-    submitBtn.disabled = false;
-    submitBtn.textContent = originalText;
+    if (window.ButtonLoader) window.ButtonLoader.stop(submitBtn);
     
     if (typeof form.requestSubmit === 'function') {
       form.requestSubmit(submitBtn);
@@ -253,8 +256,11 @@ form.addEventListener('submit', async function(e) {
   } catch (err) {
     console.error(err);
     alert(err.message || 'Une erreur est survenue lors de l\'upload des images.');
-    submitBtn.textContent = originalText;
-    submitBtn.disabled = false;
+    if (window.ButtonLoader) {
+      window.ButtonLoader.stop(submitBtn);
+    } else {
+      submitBtn.disabled = false;
+    }
     helpText.style.color = '#ef4444';
     helpText.textContent = 'L\'upload a échoué.';
   }

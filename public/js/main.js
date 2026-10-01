@@ -37,6 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Only AJAX on product page, not if no fetch support
       if (!window.fetch) return;
       e.preventDefault();
+      
+      if (window.ButtonLoader) window.ButtonLoader.start(btn);
 
       const data = new FormData(form);
       try {
@@ -46,6 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' }
         });
         const json = await res.json();
+        
+        if (window.ButtonLoader) window.ButtonLoader.stop(btn);
+        
         if (json.success) {
           const badge = document.getElementById('cart-badge');
           if (badge) {
@@ -61,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }, 2000);
         }
       } catch (err) {
+        if (window.ButtonLoader) window.ButtonLoader.stop(btn);
         form.submit();
       }
     });
@@ -154,34 +160,98 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// Handle form submission loading states
-document.addEventListener('DOMContentLoaded', () => {
-  const formsToHandle = document.querySelectorAll('form.auth-form, form.checkout-form');
+// Global Button Loading Manager
+window.ButtonLoader = {
+  getLoadingText: function(originalText) {
+    const t = (originalText || '').toLowerCase().trim();
+    if (t.includes('créer') || t.includes('inscription')) return 'Création...';
+    if (t.includes('connecter') || t.includes('connexion')) return 'Connexion...';
+    if (t.includes('enregistrer') || t.includes('sauvegarder') || t.includes('modifier')) return 'Enregistrement...';
+    if (t.includes('supprimer') || t.includes('retirer')) return 'Suppression...';
+    if (t.includes('commander') || t.includes('valider') || t.includes('payer')) return 'Traitement...';
+    if (t.includes('ajouter')) return 'Ajout...';
+    if (t.includes('envoyer')) return 'Envoi...';
+    if (t.includes('rechercher')) return 'Recherche...';
+    if (t.includes('upload') || t.includes('télécharger')) return 'Téléchargement...';
+    return 'Chargement...';
+  },
   
-  formsToHandle.forEach(form => {
-    form.addEventListener('submit', function() {
-      const submitBtn = this.querySelector('button[type="submit"]');
-      if (submitBtn && !submitBtn.classList.contains('loading')) {
-        // Prevent double click visual (actual prevention is handled by disabling button or pointer-events)
-        const originalText = submitBtn.textContent.trim();
-        let loadingText = 'Chargement...';
-        
-        // Customize text based on original content
-        if (originalText.toLowerCase().includes('créer') || originalText.toLowerCase().includes('inscription')) {
-          loadingText = 'Création en cours...';
-        } else if (originalText.toLowerCase().includes('connecter') || originalText.toLowerCase().includes('connexion')) {
-          loadingText = 'Connexion...';
-        } else if (originalText.toLowerCase().includes('enregistrer') || originalText.toLowerCase().includes('sauvegarder')) {
-          loadingText = 'Enregistrement...';
-        } else if (originalText.toLowerCase().includes('commander') || originalText.toLowerCase().includes('valider')) {
-          loadingText = 'Traitement...';
-        }
-        // Replace content cleanly without destroying the original button DOM
-        submitBtn.classList.add('loading');
-        submitBtn.textContent = loadingText;
-        submitBtn.style.opacity = '0.7';
-        submitBtn.style.pointerEvents = 'none';
-      }
+  start: function(btn, customText = null) {
+    if (!btn || btn.dataset.loading === 'true') return;
+    
+    btn.dataset.originalHtml = btn.innerHTML;
+    btn.dataset.originalWidth = btn.style.width;
+    btn.dataset.originalPointerEvents = btn.style.pointerEvents;
+    btn.dataset.originalOpacity = btn.style.opacity;
+    btn.dataset.loading = 'true';
+    
+    const computedWidth = btn.getBoundingClientRect().width;
+    const loadingText = customText || this.getLoadingText(btn.textContent);
+    
+    if (computedWidth > 0 && !btn.style.width) {
+      btn.style.width = computedWidth + 'px';
+    }
+    
+    const spinner = `<svg class="btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px;"><circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle><path d="M12 2a10 10 0 0 1 10 10"></path></svg>`;
+    
+    btn.innerHTML = `<span style="display: flex; align-items: center; justify-content: center; gap: 6px;">${spinner} <span>${loadingText}</span></span>`;
+    btn.style.opacity = '0.7';
+    btn.style.pointerEvents = 'none';
+    
+    // Slight delay to prevent immediate synchronous disabled state blocking forms in some browsers
+    setTimeout(() => {
+      if(btn.dataset.loading === 'true') btn.disabled = true;
+    }, 10);
+  },
+  
+  stop: function(btn) {
+    if (!btn || btn.dataset.loading !== 'true') return;
+    
+    btn.innerHTML = btn.dataset.originalHtml || '';
+    btn.style.width = btn.dataset.originalWidth || '';
+    btn.style.opacity = btn.dataset.originalOpacity || '';
+    btn.style.pointerEvents = btn.dataset.originalPointerEvents || '';
+    btn.disabled = false;
+    delete btn.dataset.loading;
+  }
+};
+
+// Global intercept for all standard forms
+document.addEventListener('submit', function(e) {
+  const form = e.target;
+  
+  // Guard against double submission (e.g. mashing Enter)
+  if (form.dataset.submitting === 'true') {
+    e.preventDefault();
+    return;
+  }
+  
+  // Only apply global loader to forms that are actually submitting (not prevented by confirm() or custom validation)
+  if (!e.defaultPrevented) {
+    form.dataset.submitting = 'true';
+    const submitBtn = form.querySelector('button[type="submit"]') || 
+                      form.querySelector('input[type="submit"]') || 
+                      form.querySelector('button:not([type="button"])');
+                      
+    if (submitBtn) {
+      window.ButtonLoader.start(submitBtn);
+      
+      // Safety reset timeout for standard forms (in case of file downloads, etc.)
+      setTimeout(() => {
+        window.ButtonLoader.stop(submitBtn);
+        form.dataset.submitting = 'false';
+      }, 8000); 
+    } else {
+      setTimeout(() => { form.dataset.submitting = 'false'; }, 8000);
+    }
+  }
+});
+
+// Restore buttons when navigating back via browser history (BFCache)
+window.addEventListener('pageshow', function(e) {
+  if (e.persisted) {
+    document.querySelectorAll('[data-loading="true"]').forEach(btn => {
+      window.ButtonLoader.stop(btn);
     });
-  });
+  }
 });
