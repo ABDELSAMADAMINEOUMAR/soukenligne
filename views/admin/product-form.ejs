@@ -160,18 +160,21 @@ form.addEventListener('submit', async function(e) {
   
   try {
     // 1. Get signed URLs
+    const csrfToken = document.querySelector('input[name="_csrf"]')?.value;
+    
     const tokenRes = await fetch('/admin/api/upload-tokens', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'CSRF-Token': document.querySelector('input[name="_csrf"]').value 
+        'X-CSRF-Token': csrfToken 
       },
+      credentials: 'same-origin',
       body: JSON.stringify({ count: files.length })
     });
     
     if (!tokenRes.ok) {
-      const errData = await tokenRes.json();
-      throw new Error(errData.error || 'Erreur lors de la préparation de l\'upload');
+      const message = await tokenRes.text();
+      throw new Error(message || 'Erreur lors de la création des accès sécurisés.');
     }
     
     const { tokens } = await tokenRes.json();
