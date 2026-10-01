@@ -36,7 +36,7 @@
         <thead><tr><th>N°</th><th>Client</th><th>Total</th><th>Statut</th><th>Date</th></tr></thead>
         <tbody>
           <% recentOrders.forEach(o => { %>
-          <tr onclick="location.href='/admin/commandes/<%= o.id %>'" style="cursor:pointer">
+          <tr data-href="/admin/commandes/<%= o.id %>" style="cursor:pointer" class="clickable-row">
             <td><strong><%= o.order_number %></strong></td>
             <td><%= o.customer_name %></td>
             <td><%= formatPrice(o.total) %></td>
@@ -110,5 +110,13 @@
   </div>
 </div>
 <% } %>
+
+<script nonce="<%= nonce %>">
+document.querySelectorAll('.clickable-row').forEach(function(row) {
+  row.addEventListener('click', function() {
+    window.location.href = this.getAttribute('data-href');
+  });
+});
+</script>
 
 <%- include('../partials/admin-footer') %>

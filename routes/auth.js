@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const { OAuth2Client } = require('google-auth-library');
 const { getDb } = require('../db/init');
 const { requireAuth } = require('../middleware/auth');
+const { validateLengths, validatePassword, invalidateOtherSessions } = require('../utils/validation');
 
 // Google OAuth client
 const googleClient = new OAuth2Client(
@@ -120,6 +121,11 @@ router.post('/inscription', registerLimiter, async (req, res) => {
       });
     }
 
+    const lengthErr = validateLengths(req.body, { full_name: 'full_name', email: 'email', phone: 'phone', whatsapp: 'whatsapp' });
+    if (lengthErr) {
+      return res.render('customer/register', { pageTitle: 'Créer un compte', error: lengthErr, form: { full_name, email, phone, whatsapp } });
+    }
+
     if (password !== password_confirm) {
       return res.render('customer/register', {
         pageTitle: 'Créer un compte', error: 'Les mots de passe ne correspondent pas.',
@@ -127,9 +133,10 @@ router.post('/inscription', registerLimiter, async (req, res) => {
       });
     }
 
-    if (password.length < 12) {
+    const pwdErr = validatePassword(password);
+    if (pwdErr) {
       return res.render('customer/register', {
-        pageTitle: 'Créer un compte', error: 'Le mot de passe doit contenir au moins 12 caractères.',
+        pageTitle: 'Créer un compte', error: pwdErr,
         form: { full_name, email, phone, whatsapp }
       });
     }
@@ -229,8 +236,9 @@ router.post('/reinitialiser-mot-de-passe', resetLimiter, async (req, res) => {
       return res.render('customer/reset-password', { pageTitle: 'Réinitialiser le mot de passe', error: 'Les mots de passe ne correspondent pas.', token });
     }
     
-    if (password.length < 12) {
-      return res.render('customer/reset-password', { pageTitle: 'Réinitialiser le mot de passe', error: 'Le mot de passe doit contenir au moins 12 caractères.', token });
+    const pwdErr = validatePassword(password);
+    if (pwdErr) {
+      return res.render('customer/reset-password', { pageTitle: 'Réinitialiser le mot de passe', error: pwdErr, token });
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -248,6 +256,9 @@ router.post('/reinitialiser-mot-de-passe', resetLimiter, async (req, res) => {
     const newHash = bcrypt.hashSync(password, 10);
     await db.query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, resetRecord.user_id]);
     await db.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [resetRecord.user_id]);
+
+    // Invalidate all existing sessions for this user (attacker sessions included)
+    await invalidateOtherSessions(db, resetRecord.user_id, null);
 
     res.redirect('/compte/connexion');
   } catch (err) {
@@ -318,6 +329,11 @@ router.post('/commande/:orderNumber/annuler', requireAuth, async (req, res) => {
 router.post('/profil', requireAuth, async (req, res) => {
   try {
     const { full_name, phone, whatsapp } = req.body;
+
+    const lengthErr = validateLengths(req.body, { full_name: 'full_name', phone: 'phone', whatsapp: 'whatsapp' });
+    if (lengthErr) {
+      return res.redirect('/compte?error=input_too_long');
+    }
     const db = getDb();
     await db.query(
       'UPDATE users SET full_name = $1, phone = $2, whatsapp = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',

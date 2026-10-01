@@ -78,7 +78,7 @@
         <tr>
           <td><%= z.name %></td>
           <td>
-            <form action="/admin/zones/supprimer/<%= z.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer cette zone ?')">
+            <form action="/admin/zones/supprimer/<%= z.id %>" method="POST" style="display:inline" class="delete-zone-form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">×</button>
             </form>
@@ -109,16 +109,26 @@
         <input type="password" name="current_password" required class="form-input">
       </div>
       <div class="form-group">
-        <label>Nouveau mot de passe (min 12 caractères)</label>
-        <input type="password" name="new_password" required class="form-input" minlength="12">
+        <label>Nouveau mot de passe (12-72 caractères)</label>
+        <input type="password" name="new_password" required class="form-input" minlength="12" maxlength="72">
       </div>
       <div class="form-group">
         <label>Confirmer le nouveau mot de passe</label>
-        <input type="password" name="new_password_confirm" required class="form-input" minlength="12">
+        <input type="password" name="new_password_confirm" required class="form-input" minlength="12" maxlength="72">
       </div>
       <button type="submit" class="btn btn-primary" style="margin-top: 1rem;">Mettre à jour le mot de passe</button>
     </form>
   </div>
 </div>
+
+<script nonce="<%= nonce %>">
+document.querySelectorAll('.delete-zone-form').forEach(function(form) {
+  form.addEventListener('submit', function(e) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette zone ?')) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
 
 <%- include('../partials/admin-footer') %>

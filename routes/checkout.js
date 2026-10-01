@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const { sendAdminOrderNotification } = require('../utils/email');
 const rateLimit = require('express-rate-limit');
 const PostgresStore = require('../utils/rate-limit-store');
+const { validateLengths } = require('../utils/validation');
 
 const checkoutLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -62,6 +63,19 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
   try {
     const db = getDb();
     const { delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes, delivery_zone_id } = req.body;
+
+    const lengthErr = validateLengths(req.body, {
+      delivery_full_name: 'delivery_full_name',
+      delivery_phone: 'delivery_phone',
+      delivery_city: 'delivery_city',
+      delivery_neighborhood: 'delivery_neighborhood',
+      delivery_address: 'delivery_address',
+      delivery_landmark: 'delivery_landmark',
+      delivery_notes: 'delivery_notes'
+    });
+    if (lengthErr) {
+      return res.redirect('/commande?error=1');
+    }
 
     // Calculate totals from cart
     let subtotal = 0;

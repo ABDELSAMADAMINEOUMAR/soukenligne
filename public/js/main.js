@@ -85,21 +85,59 @@ window.handleLiveSearch = function(inputElement) {
       .then(r => r.json())
       .then(products => {
         if (products.length > 0) {
-          const html = products.map(p => `
-            <a href="/produit/${p.slug}" class="live-search-item">
-              <img src="${p.image || '/img/placeholder.jpg'}" alt="${p.name}" class="live-search-img">
-              <div class="live-search-info">
-                <div class="live-search-name">${p.name}</div>
-                <div class="live-search-price">
-                  ${p.discount_price ? `<span class="current-price">${p.discount_price} FCFA</span> <span class="old-price">${p.price} FCFA</span>` : `<span class="current-price">${p.price} FCFA</span>`}
-                </div>
-              </div>
-            </a>
-          `).join('');
-          resultsContainer.innerHTML = html;
+          resultsContainer.innerHTML = '';
+          products.forEach(p => {
+            const a = document.createElement('a');
+            a.href = '/produit/' + encodeURIComponent(p.slug);
+            a.className = 'live-search-item';
+            
+            const img = document.createElement('img');
+            img.src = p.image || '/img/placeholder.jpg';
+            img.alt = p.name;
+            img.className = 'live-search-img';
+            a.appendChild(img);
+
+            const info = document.createElement('div');
+            info.className = 'live-search-info';
+            
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'live-search-name';
+            nameDiv.textContent = p.name;
+            info.appendChild(nameDiv);
+
+            const priceDiv = document.createElement('div');
+            priceDiv.className = 'live-search-price';
+            
+            if (p.discount_price) {
+              const currentSpan = document.createElement('span');
+              currentSpan.className = 'current-price';
+              currentSpan.textContent = p.discount_price + ' FCFA';
+              
+              const oldSpan = document.createElement('span');
+              oldSpan.className = 'old-price';
+              oldSpan.textContent = p.price + ' FCFA';
+              
+              priceDiv.appendChild(currentSpan);
+              priceDiv.appendChild(document.createTextNode(' '));
+              priceDiv.appendChild(oldSpan);
+            } else {
+              const currentSpan = document.createElement('span');
+              currentSpan.className = 'current-price';
+              currentSpan.textContent = p.price + ' FCFA';
+              priceDiv.appendChild(currentSpan);
+            }
+            info.appendChild(priceDiv);
+            
+            a.appendChild(info);
+            resultsContainer.appendChild(a);
+          });
           resultsContainer.style.display = 'block';
         } else {
-          resultsContainer.innerHTML = '<div class="live-search-empty">Aucun produit trouvé</div>';
+          resultsContainer.innerHTML = '';
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'live-search-empty';
+          emptyDiv.textContent = 'Aucun produit trouvé';
+          resultsContainer.appendChild(emptyDiv);
           resultsContainer.style.display = 'block';
         }
       })

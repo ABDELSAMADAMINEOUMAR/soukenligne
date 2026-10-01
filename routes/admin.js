@@ -7,6 +7,7 @@ const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 const { getDb, getSettings, setSetting } = require('../db/init');
 const { requireAdmin } = require('../middleware/auth');
+const { validateLengths, validatePassword, invalidateOtherSessions } = require('../utils/validation');
 
 // Supabase config
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -22,6 +23,16 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024, files: 10 
   const allowed = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
   cb(null, allowed.includes(path.extname(file.originalname).toLowerCase()));
 }});
+
+function getSafeMimeType(buffer) {
+  if (!buffer || buffer.length < 12) return null;
+  if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) return 'image/png';
+  if (buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF) return 'image/jpeg';
+  if (buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38) return 'image/gif';
+  if (buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46 &&
+      buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50) return 'image/webp';
+  return null;
+}
 
 router.use(requireAdmin);
 
@@ -140,9 +151,15 @@ router.get('/produits/ajouter', async (req, res) => {
   }
 });
 
-router.post('/produits/ajouter', upload.array('images', 10), async (req, res) => {
+router.post('/produits/ajouter', async (req, res) => {
   const db = getDb();
-  const { name, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description } = req.body;
+  const { name, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description, uploaded_images } = req.body;
+
+  const lengthErr = validateLengths(req.body, { name: 'product_name', description: 'product_description', short_description: 'product_short_description', brand: 'brand', sku: 'sku', meta_title: 'meta_title', meta_description: 'meta_description' });
+  if (lengthErr) {
+    const catRes = await db.query('SELECT * FROM categories WHERE is_active = true ORDER BY sort_order ASC');
+    return res.render('admin/product-form', { pageTitle: 'Ajouter un produit', layout: 'admin', product: req.body, categories: catRes.rows, error: lengthErr });
+  }
 
   const slug = slugify(name, { lower: true, strict: true }) + '-' + Math.random().toString(36).slice(2, 6);
 
@@ -159,22 +176,43 @@ router.post('/produits/ajouter', upload.array('images', 10), async (req, res) =>
 
     const productId = result.rows[0].id;
 
-    if (req.files && req.files.length > 0 && supabase) {
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        const ext = path.extname(file.originalname);
-        const filename = `prod_${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+    if (uploaded_images && supabase) {
+      const paths = Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images];
+      let order = 0;
+      
+      for (let i = 0; i < paths.length; i++) {
+        const tempPath = paths[i];
+        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
         
-        const { data, error } = await supabase.storage.from('products').upload(filename, file.buffer, {
-          contentType: file.mimetype
-        });
+        try {
+          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
+          if (!resp.ok) continue;
+          
+          const arrayBuffer = await resp.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const safeMime = getSafeMimeType(buffer);
+          
+          if (!safeMime) {
+            console.error("Invalid magic bytes for file:", tempPath);
+            await supabase.storage.from('products').remove([tempPath]);
+            continue;
+          }
 
-        if (!error) {
-          const { data: publicData } = supabase.storage.from('products').getPublicUrl(filename);
-          await db.query('INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES ($1, $2, $3, $4)', 
-            [productId, publicData.publicUrl, i === 0 ? true : false, i]);
-        } else {
-          console.error("Supabase upload error:", error);
+          const ext = safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif';
+          const finalFilename = `prod_${productId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+          
+          const { data, error } = await supabase.storage.from('products').move(tempPath, finalFilename);
+          
+          if (!error) {
+            const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
+            await db.query('INSERT INTO product_images (product_id, image_path, is_primary, sort_order) VALUES ($1, $2, $3, $4)', 
+              [productId, publicData.publicUrl, order === 0 ? true : false, order]);
+            order++;
+          } else {
+            console.error("Supabase move error:", error);
+          }
+        } catch (fetchErr) {
+          console.error("Fetch magic bytes error:", fetchErr);
         }
       }
     }
@@ -204,10 +242,10 @@ router.get('/produits/modifier/:id', async (req, res) => {
   }
 });
 
-router.post('/produits/modifier/:id', upload.array('images', 10), async (req, res) => {
+router.post('/produits/modifier/:id', async (req, res) => {
   try {
     const db = getDb();
-    const { name, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description } = req.body;
+    const { name, description, short_description, price, discount_price, category_id, brand, sku, stock_quantity, is_available, is_featured, meta_title, meta_description, uploaded_images } = req.body;
 
     await db.query(`
       UPDATE products SET name = $1, description = $2, short_description = $3, price = $4, discount_price = $5,
@@ -221,23 +259,41 @@ router.post('/produits/modifier/:id', upload.array('images', 10), async (req, re
       meta_title || null, meta_description || null, req.params.id
     ]);
 
-    if (req.files && req.files.length > 0 && supabase) {
+    if (uploaded_images && supabase) {
+      const paths = Array.isArray(uploaded_images) ? uploaded_images : [uploaded_images];
       const maxOrderRes = await db.query('SELECT MAX(sort_order) as m FROM product_images WHERE product_id = $1', [req.params.id]);
       let order = (maxOrderRes.rows[0] && maxOrderRes.rows[0].m !== null) ? maxOrderRes.rows[0].m + 1 : 0;
       
-      for (let i = 0; i < req.files.length; i++) {
-        const file = req.files[i];
-        const ext = path.extname(file.originalname);
-        const filename = `prod_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+      for (let i = 0; i < paths.length; i++) {
+        const tempPath = paths[i];
+        const { data: publicDataTemp } = supabase.storage.from('products').getPublicUrl(tempPath);
         
-        const { data, error } = await supabase.storage.from('products').upload(filename, file.buffer, {
-          contentType: file.mimetype
-        });
+        try {
+          const resp = await fetch(publicDataTemp.publicUrl, { headers: { 'Range': 'bytes=0-11' } });
+          if (!resp.ok) continue;
+          
+          const arrayBuffer = await resp.arrayBuffer();
+          const buffer = Buffer.from(arrayBuffer);
+          const safeMime = getSafeMimeType(buffer);
+          
+          if (!safeMime) {
+            console.error("Invalid magic bytes for file:", tempPath);
+            await supabase.storage.from('products').remove([tempPath]);
+            continue;
+          }
 
-        if (!error) {
-          const { data: publicData } = supabase.storage.from('products').getPublicUrl(filename);
-          await db.query('INSERT INTO product_images (product_id, image_path, sort_order) VALUES ($1, $2, $3)', 
-            [req.params.id, publicData.publicUrl, order++]);
+          const ext = safeMime === 'image/jpeg' ? '.jpg' : safeMime === 'image/png' ? '.png' : safeMime === 'image/webp' ? '.webp' : '.gif';
+          const finalFilename = `prod_${req.params.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`;
+          
+          const { data, error } = await supabase.storage.from('products').move(tempPath, finalFilename);
+          
+          if (!error) {
+            const { data: publicData } = supabase.storage.from('products').getPublicUrl(finalFilename);
+            await db.query('INSERT INTO product_images (product_id, image_path, sort_order) VALUES ($1, $2, $3)', 
+              [req.params.id, publicData.publicUrl, order++]);
+          }
+        } catch (fetchErr) {
+          console.error("Fetch magic bytes error:", fetchErr);
         }
       }
     }
@@ -290,6 +346,8 @@ router.get('/categories', async (req, res) => {
 router.post('/categories/ajouter', async (req, res) => {
   try {
     const { name, description } = req.body;
+    const lengthErr = validateLengths(req.body, { name: 'category_name', description: 'category_description' });
+    if (lengthErr) return res.redirect('/admin/categories');
     const db = getDb();
     const slug = slugify(name, { lower: true, strict: true });
     await db.query('INSERT INTO categories (name, slug, description) VALUES ($1, $2, $3)', [name, slug, description || null]);
@@ -425,7 +483,11 @@ router.post('/parametres', async (req, res) => {
   try {
     const fields = ['store_name', 'store_tagline', 'store_description', 'whatsapp_number', 'store_phone', 'store_email', 'store_address', 'default_delivery_fee', 'meta_title', 'meta_description', 'facebook_url', 'instagram_url', 'tiktok_url'];
     for (const f of fields) {
-      if (req.body[f] !== undefined) await setSetting(f, req.body[f]);
+      if (req.body[f] !== undefined) {
+        const val = String(req.body[f]);
+        if (val.length > 2000) continue; // Skip oversized setting values
+        await setSetting(f, val);
+      }
     }
     res.redirect('/admin/parametres');
   } catch (err) {
@@ -437,6 +499,8 @@ router.post('/parametres', async (req, res) => {
 router.post('/zones/ajouter', async (req, res) => {
   try {
     const { name } = req.body;
+    const lengthErr = validateLengths(req.body, { name: 'zone_name' });
+    if (lengthErr) return res.redirect('/admin/parametres');
     const db = getDb();
     await db.query('INSERT INTO delivery_zones (name, fee) VALUES ($1, 0)', [name]);
     res.redirect('/admin/parametres');
@@ -465,8 +529,9 @@ router.post('/changer-mot-de-passe', adminPasswordLimiter, async (req, res) => {
       return res.redirect('/admin/parametres?error=passwords_mismatch');
     }
     
-    if (new_password.length < 12) {
-      return res.redirect('/admin/parametres?error=password_too_short');
+    const pwdErr = validatePassword(new_password);
+    if (pwdErr) {
+      return res.redirect('/admin/parametres?error=password_invalid');
     }
     
     const db = getDb();
@@ -482,6 +547,11 @@ router.post('/changer-mot-de-passe', adminPasswordLimiter, async (req, res) => {
     await db.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [req.session.userId]);
     
     const userId = req.session.userId;
+    const currentSid = req.sessionID;
+
+    // Invalidate all other sessions for this admin user
+    await invalidateOtherSessions(db, userId, currentSid);
+
     req.session.regenerate((err) => {
       if (err) console.error(err);
       req.session.userId = userId;
@@ -511,6 +581,40 @@ router.get('/api/notifications', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.json({ pendingCount: 0, recentPending: [] });
+  }
+});
+
+// API: Generate signed upload URLs for browser-based uploads
+router.post('/api/upload-tokens', async (req, res) => {
+  try {
+    const { count } = req.body;
+    const numFiles = parseInt(count, 10);
+    
+    if (isNaN(numFiles) || numFiles < 1 || numFiles > 10) {
+      return res.status(400).json({ error: 'Nombre d\'images invalide. Maximum 10 images autorisées.' });
+    }
+    
+    if (!supabase) {
+      return res.status(500).json({ error: 'Supabase n\'est pas configuré sur ce serveur.' });
+    }
+
+    const tokens = [];
+    for (let i = 0; i < numFiles; i++) {
+      const filename = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.tmp`;
+      const { data, error } = await supabase.storage.from('products').createSignedUploadUrl(filename);
+      
+      if (error || !data) {
+        console.error('Erreur createSignedUploadUrl:', error);
+        return res.status(500).json({ error: 'Erreur lors de la génération des tokens d\'upload.' });
+      }
+      
+      tokens.push({ signedUrl: data.signedUrl, path: data.path });
+    }
+    
+    res.json({ tokens });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server Error' });
   }
 });
 

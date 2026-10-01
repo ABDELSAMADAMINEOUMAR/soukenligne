@@ -28,7 +28,7 @@
 .admin-nav-link.active { color: var(--white); background: rgba(255,255,255,.1); border-left: 3px solid var(--accent); }
 .admin-nav-divider { height: 1px; background: rgba(255,255,255,.08); margin: .5rem 1rem; }
 
-.admin-main { margin-left: 250px; min-height: 100vh; }
+.admin-main { margin-left: 250px; min-height: 100vh; overflow-x: hidden; }
 .admin-topbar {
   background: var(--white);
   padding: .75rem 1.5rem;

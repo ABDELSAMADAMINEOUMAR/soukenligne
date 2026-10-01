@@ -18,9 +18,9 @@ app.set('views', path.join(__dirname, 'views'));
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Body parsing
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+// Body parsing with size limits
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(express.json({ limit: '100kb' }));
 
 const crypto = require('crypto');
 const helmet = require('helmet');

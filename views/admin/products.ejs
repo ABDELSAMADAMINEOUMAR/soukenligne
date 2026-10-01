@@ -43,8 +43,8 @@
           <td><span class="status-badge <%= p.is_available ? 'status-confirmed' : 'status-cancelled' %>"><%= p.is_available ? 'Actif' : 'Inactif' %></span></td>
           <td class="actions-cell">
             <a href="/admin/produits/modifier/<%= p.id %>" class="btn btn-sm btn-outline">Modifier</a>
-            <button type="button" class="btn btn-sm btn-outline" title="Aperçu rapide" onclick='openQuickView(<%- JSON.stringify(p).replace(/'/g, "\\'") %>)'>👁</button>
-            <form action="/admin/produits/supprimer/<%= p.id %>" method="POST" style="display:inline" onsubmit="return confirm('Supprimer ce produit ?')">
+            <button type="button" class="btn btn-sm btn-outline quick-view-btn" title="Aperçu rapide" data-product="<%= JSON.stringify(p) %>">👁</button>
+            <form action="/admin/produits/supprimer/<%= p.id %>" method="POST" style="display:inline" class="delete-product-form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">Suppr.</button>
             </form>
@@ -58,7 +58,7 @@
 </div>
 <div id="quick-view-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1050; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
   <div style="background: white; padding: 2rem; border-radius: 12px; width: 90%; max-width: 650px; display: flex; gap: 2rem; position: relative; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
-    <button type="button" onclick="closeQuickView()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+    <button type="button" id="qv-close-btn" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
     <div style="flex: 1; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 8px; padding: 1rem;">
       <img id="qv-image" src="" alt="" style="max-width: 100%; max-height: 300px; object-fit: contain;">
     </div>
@@ -88,50 +88,72 @@
 </div>
 
 <script nonce="<%= nonce %>">
-function openQuickView(product) {
-  document.getElementById('qv-title').textContent = product.name;
-  document.getElementById('qv-category').textContent = product.category_name || 'Sans catégorie';
-  
-  if (product.discount_price) {
-    document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.discount_price) + ' FCFA';
-    document.getElementById('qv-original-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
-  } else {
-    document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
-    document.getElementById('qv-original-price').textContent = '';
+(function() {
+  function openQuickView(product) {
+    document.getElementById('qv-title').textContent = product.name;
+    document.getElementById('qv-category').textContent = product.category_name || 'Sans catégorie';
+    
+    if (product.discount_price) {
+      document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.discount_price) + ' FCFA';
+      document.getElementById('qv-original-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
+    } else {
+      document.getElementById('qv-price').textContent = new Intl.NumberFormat('fr-FR').format(product.price) + ' FCFA';
+      document.getElementById('qv-original-price').textContent = '';
+    }
+
+    document.getElementById('qv-stock').textContent = product.stock_quantity;
+    if (product.stock_quantity <= 5) {
+      document.getElementById('qv-stock').style.color = '#ef4444';
+    } else {
+      document.getElementById('qv-stock').style.color = '#334155';
+    }
+
+    var statusEl = document.getElementById('qv-status');
+    statusEl.textContent = product.is_available ? 'Actif' : 'Inactif';
+    statusEl.style.color = product.is_available ? '#10b981' : '#ef4444';
+
+    document.getElementById('qv-desc').textContent = product.short_description || 'Aucune description courte disponible.';
+    
+    var imgEl = document.getElementById('qv-image');
+    if (product.image) {
+      imgEl.src = product.image;
+      imgEl.style.display = 'block';
+    } else {
+      imgEl.style.display = 'none';
+    }
+
+    document.getElementById('quick-view-modal').style.display = 'flex';
   }
 
-  document.getElementById('qv-stock').textContent = product.stock_quantity;
-  if (product.stock_quantity <= 5) {
-    document.getElementById('qv-stock').style.color = '#ef4444';
-  } else {
-    document.getElementById('qv-stock').style.color = '#334155';
+  function closeQuickView() {
+    document.getElementById('quick-view-modal').style.display = 'none';
   }
 
-  const statusEl = document.getElementById('qv-status');
-  statusEl.textContent = product.is_available ? 'Actif' : 'Inactif';
-  statusEl.style.color = product.is_available ? '#10b981' : '#ef4444';
+  // Quick View buttons — event delegation
+  document.querySelectorAll('.quick-view-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var product = JSON.parse(this.getAttribute('data-product'));
+      openQuickView(product);
+    });
+  });
 
-  document.getElementById('qv-desc').textContent = product.short_description || 'Aucune description courte disponible.';
-  
-  const imgEl = document.getElementById('qv-image');
-  if (product.image) {
-    imgEl.src = product.image;
-    imgEl.style.display = 'block';
-  } else {
-    imgEl.style.display = 'none';
-  }
+  // Close button
+  document.getElementById('qv-close-btn').addEventListener('click', closeQuickView);
 
-  const modal = document.getElementById('quick-view-modal');
-  modal.style.display = 'flex';
-}
+  // Close when clicking outside the card
+  document.getElementById('quick-view-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeQuickView();
+  });
 
-function closeQuickView() {
-  document.getElementById('quick-view-modal').style.display = 'none';
-}
-
-// Close when clicking outside the card
-document.getElementById('quick-view-modal').addEventListener('click', function(e) {
-  if (e.target === this) closeQuickView();
-});
+  // Delete confirmation — event delegation
+  document.querySelectorAll('.delete-product-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      if (!confirm('Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.')) {
+        e.preventDefault();
+      }
+    });
+  });
+})();
 </script>
 <%- include('../partials/admin-footer') %>
+

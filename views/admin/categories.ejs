@@ -18,8 +18,8 @@
           </td>
           <td><span class="status-badge <%= cat.is_active ? 'status-confirmed' : 'status-cancelled' %>"><%= cat.is_active ? 'Active' : 'Inactive' %></span></td>
           <td class="actions-cell" style="display: flex; gap: 0.5rem;">
-            <button type="button" class="btn btn-sm btn-outline" onclick="editCategory('<%= cat.id %>', '<%= cat.name.replace(/'/g, "\\'") %>', '<%= (cat.description || '').replace(/'/g, "\\'") %>', <%= cat.is_active %>)">Éditer</button>
-            <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" onsubmit="return confirm('Désactiver cette catégorie ?')">
+            <button type="button" class="btn btn-sm btn-outline edit-cat-btn" data-id="<%= cat.id %>" data-name="<%= cat.name %>" data-desc="<%= cat.description || '' %>" data-active="<%= cat.is_active %>">Éditer</button>
+            <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" class="delete-cat-form">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
               <button type="submit" class="btn btn-sm btn-danger">Désactiver</button>
             </form>
@@ -51,7 +51,7 @@
       </div>
       <div style="display:flex; gap:0.5rem; margin-top: 1rem;">
         <button type="submit" id="submit-btn" class="btn btn-primary">Ajouter</button>
-        <button type="button" id="cancel-btn" class="btn btn-outline" style="display:none" onclick="resetForm()">Annuler</button>
+        <button type="button" id="cancel-btn" class="btn btn-outline" style="display:none">Annuler</button>
       </div>
     </form>
   </div>
@@ -83,6 +83,25 @@ function editCategory(id, name, desc, isActive) {
   // scroll to the form smoothly
   form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
+
+// Event listeners for edit buttons
+document.querySelectorAll('.edit-cat-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    editCategory(this.getAttribute('data-id'), this.getAttribute('data-name'), this.getAttribute('data-desc'), this.getAttribute('data-active'));
+  });
+});
+
+// Event listeners for delete forms
+document.querySelectorAll('.delete-cat-form').forEach(function(form) {
+  form.addEventListener('submit', function(e) {
+    if (!confirm('Êtes-vous sûr de vouloir désactiver cette catégorie ?')) {
+      e.preventDefault();
+    }
+  });
+});
+
+// Cancel button
+document.getElementById('cancel-btn').addEventListener('click', resetForm);
 </script>
 
 <%- include('../partials/admin-footer') %>

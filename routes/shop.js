@@ -3,6 +3,7 @@ const router = express.Router();
 const { getDb, getSettings } = require('../db/init');
 const rateLimit = require('express-rate-limit');
 const PostgresStore = require('../utils/rate-limit-store');
+const { MAX_LENGTHS } = require('../utils/validation');
 
 const searchLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -73,8 +74,9 @@ router.get('/boutique', async (req, res) => {
     let paramIndex = 1;
 
     if (q) {
+      const truncatedQ = typeof q === 'string' ? q.slice(0, MAX_LENGTHS.search_query) : '';
       where += ` AND (p.name ILIKE $${paramIndex} OR p.description ILIKE $${paramIndex+1} OR p.brand ILIKE $${paramIndex+2})`;
-      const search = `%${q}%`;
+      const search = `%${truncatedQ}%`;
       params.push(search, search, search);
       paramIndex += 3;
     }
@@ -169,7 +171,7 @@ router.get('/categorie/:slug', (req, res) => {
 router.get('/api/search', searchLimiter, async (req, res) => {
   try {
     const db = getDb();
-    const query = req.query.q ? req.query.q.trim() : '';
+    const query = req.query.q ? req.query.q.trim().slice(0, MAX_LENGTHS.search_query) : '';
     
     if (!query) return res.json([]);
     
