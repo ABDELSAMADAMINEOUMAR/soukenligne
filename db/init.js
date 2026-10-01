@@ -211,7 +211,8 @@ async function initTables() {
     'CREATE INDEX IF NOT EXISTS idx_categories_slug ON categories(slug)',
     'CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_orders_number ON orders(order_number)',
-    'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)'
+    'CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)',
+    'CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash)'
   ];
 
   for (const idx of indexes) {
