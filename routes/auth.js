@@ -83,8 +83,7 @@ router.post('/connexion', loginLimiter, async (req, res) => {
 
     // Social-only users don't have a password
     if (!user.password_hash) {
-      const provider = 'Google';
-      return res.render('customer/login', { pageTitle: 'Connexion', error: `Ce compte utilise ${provider} pour se connecter. Utilisez le bouton "Continuer avec ${provider}" ci-dessous.` });
+      return res.render('customer/login', { pageTitle: 'Connexion', error: 'Email ou mot de passe incorrect.' });
     }
 
     if (!bcrypt.compareSync(password, user.password_hash)) {
