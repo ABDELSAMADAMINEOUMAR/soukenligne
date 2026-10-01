@@ -65,9 +65,7 @@ router.get('/boutique', async (req, res) => {
   try {
     const db = getDb();
     const { q, categorie, tri, page } = req.query;
-    const currentPage = parseInt(page) || 1;
     const perPage = 12;
-    const offset = (currentPage - 1) * perPage;
 
     let where = "WHERE p.status = 'active' AND p.is_available = true";
     const params = [];
@@ -94,7 +92,21 @@ router.get('/boutique', async (req, res) => {
 
     const countRes = await db.query(`SELECT COUNT(*) as total FROM products p LEFT JOIN categories c ON p.category_id = c.id ${where}`, params);
     const total = parseInt(countRes.rows[0].total);
-    const totalPages = Math.ceil(total / perPage);
+    
+    // Determine maximum valid page (always at least 1)
+    const totalPages = Math.max(1, Math.ceil(total / perPage));
+    
+    // Parse user requested page safely
+    let requestedPage = parseInt(page);
+    if (isNaN(requestedPage) || requestedPage < 1) {
+      requestedPage = 1;
+    }
+    
+    // Clamp to valid range to prevent massive OFFSET denial of service
+    const currentPage = Math.min(requestedPage, totalPages);
+    
+    // Calculate safe offset
+    const offset = (currentPage - 1) * perPage;
 
     const productsParams = [...params, perPage, offset];
     const productsRes = await db.query(`
