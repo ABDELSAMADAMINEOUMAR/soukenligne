@@ -30,7 +30,7 @@
         <% if (images.length > 1) { %>
         <div class="product-thumbs">
           <% images.forEach((img, i) => { %>
-          <button class="product-thumb <%= i === 0 ? 'active' : '' %>" onclick="changeImage(this, '<%= img.image_path %>')">
+          <button type="button" class="product-thumb <%= i === 0 ? 'active' : '' %>" data-image="<%= img.image_path %>">
             <img src="<%= img.image_path %>" alt="<%= product.name %> image <%= i + 1 %>">
           </button>
           <% }); %>
@@ -84,9 +84,9 @@
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="product_id" value="<%= product.id %>">
             <div class="quantity-selector">
-              <button type="button" class="qty-btn" onclick="changeQty(-1)">−</button>
+              <button type="button" class="qty-btn" data-delta="-1">−</button>
               <input type="number" name="quantity" value="1" min="1" max="<%= product.stock_quantity %>" id="qty-input" class="qty-input">
-              <button type="button" class="qty-btn" onclick="changeQty(1)">+</button>
+              <button type="button" class="qty-btn" data-delta="1">+</button>
             </div>
             <button type="submit" class="btn btn-primary btn-lg btn-block add-to-cart-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
@@ -141,16 +141,33 @@
 </section>
 
 <script nonce="<%= nonce %>">
-function changeImage(thumb, src) {
-  document.getElementById('main-product-image').src = src;
-  document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('active'));
-  thumb.classList.add('active');
-}
-function changeQty(delta) {
-  const input = document.getElementById('qty-input');
-  const val = parseInt(input.value) + delta;
-  if (val >= 1 && val <= parseInt(input.max)) input.value = val;
-}
+document.addEventListener('DOMContentLoaded', () => {
+  // Gallery image click handler
+  document.querySelectorAll('.product-thumb').forEach(thumb => {
+    thumb.addEventListener('click', function() {
+      const src = this.getAttribute('data-image');
+      const mainImg = document.getElementById('main-product-image');
+      if (mainImg && src) {
+        mainImg.src = src;
+        document.querySelectorAll('.product-thumb').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+      }
+    });
+  });
+
+  // Quantity button click handlers
+  document.querySelectorAll('.qty-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const delta = parseInt(this.getAttribute('data-delta'), 10);
+      const input = document.getElementById('qty-input');
+      if (input && !isNaN(delta)) {
+        const val = parseInt(input.value, 10) + delta;
+        const max = parseInt(input.max, 10);
+        if (val >= 1 && val <= max) input.value = val;
+      }
+    });
+  });
+});
 </script>
 
 <%- include('partials/footer') %>
