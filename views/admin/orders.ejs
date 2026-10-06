@@ -1,6 +1,6 @@
 <%- include('../partials/admin-header') %>
 
-<div class="admin-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+<div class="admin-toolbar">
   <div class="filter-tabs">
     <a href="/admin/commandes<%= locals.search ? '?search=' + locals.search : '' %>" class="filter-tab <%= !filterStatus ? 'active' : '' %>">Toutes</a>
     <a href="/admin/commandes?status=pending<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'pending' ? 'active' : '' %>">En attente</a>
@@ -10,17 +10,18 @@
     <a href="/admin/commandes?status=delivered<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'delivered' ? 'active' : '' %>">Livrées</a>
     <a href="/admin/commandes?status=cancelled<%= locals.search ? '&search=' + locals.search : '' %>" class="filter-tab <%= filterStatus === 'cancelled' ? 'active' : '' %>">Annulées</a>
   </div>
-  <form action="/admin/commandes" method="GET" class="search-form" style="display: flex; gap: 0.5rem;">
+  <form action="/admin/commandes" method="GET" class="search-form orders-search">
     <% if (filterStatus) { %>
       <input type="hidden" name="status" value="<%= filterStatus %>">
     <% } %>
-    <input type="text" name="search" placeholder="N° commande, nom ou tél..." value="<%= locals.search || '' %>" class="form-input" style="width: 250px;">
+    <input type="text" name="search" placeholder="N° commande, nom ou tél..." value="<%= locals.search || '' %>" class="form-input">
     <button type="submit" class="btn btn-primary">Rechercher</button>
     <% if (locals.search) { %>
       <a href="/admin/commandes<%= filterStatus ? '?status=' + filterStatus : '' %>" class="btn btn-outline">Effacer</a>
     <% } %>
   </form>
 </div>
+
 
 <div class="admin-card">
   <% if (orders.length === 0) { %>

@@ -75,6 +75,7 @@
 .admin-card h3 { font-size: 1rem; margin-bottom: 1rem; }
 
 .admin-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: .75rem; }
+.admin-toolbar .search-form { gap: 0.5rem; }
 .admin-thumb { width: 50px; height: 50px; border-radius: var(--radius-sm); object-fit: cover; }
 .admin-thumb-empty { width: 50px; height: 50px; background: var(--gray-100); border-radius: var(--radius-sm); }
 
