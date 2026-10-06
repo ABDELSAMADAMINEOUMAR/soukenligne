@@ -1,8 +1,11 @@
 <%- include('../partials/admin-header') %>
 
 <div class="admin-grid-2">
-  <div class="admin-card">
+<div class="admin-card">
     <h3>Catégories</h3>
+
+    <!-- Desktop table view -->
+    <div class="table-responsive d-none-mobile">
     <table class="data-table">
       <thead><tr><th>Nom</th><th>Produits</th><th>Statut</th><th>Actions</th></tr></thead>
       <tbody>
@@ -28,7 +31,37 @@
         <% }); %>
       </tbody>
     </table>
+    </div>
+
+    <!-- Mobile card view -->
+    <div class="mobile-cards d-none-desktop">
+      <% categories.forEach(cat => { %>
+      <div class="mobile-cat-card">
+        <div class="mobile-cat-header">
+          <strong><%= cat.name %></strong>
+          <span class="status-badge <%= cat.is_active ? 'status-confirmed' : 'status-cancelled' %>"><%= cat.is_active ? 'Active' : 'Inactive' %></span>
+        </div>
+        <div class="mobile-cat-body">
+          <span class="mobile-cat-count">
+            <% if (cat.product_count > 0) { %>
+              <a href="/admin/produits?categorie=<%= cat.id %>" class="btn btn-sm btn-outline" style="padding: 2px 8px; font-weight: bold;" title="Voir les produits"><%= cat.product_count %></a> produit<%= cat.product_count > 1 ? 's' : '' %>
+            <% } else { %>
+              <span class="text-muted">0 produit</span>
+            <% } %>
+          </span>
+          <div class="mobile-cat-actions">
+            <button type="button" class="btn btn-sm btn-outline edit-cat-btn" data-id="<%= cat.id %>" data-name="<%= cat.name %>" data-desc="<%= cat.description || '' %>" data-active="<%= cat.is_active %>">Éditer</button>
+            <form action="/admin/categories/supprimer/<%= cat.id %>" method="POST" style="display:inline" class="delete-cat-form">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="btn btn-sm btn-danger">Supprimer</button>
+            </form>
+          </div>
+        </div>
+      </div>
+      <% }); %>
+    </div>
   </div>
+
 
   <div class="admin-card">
     <h3 id="form-title">Ajouter une catégorie</h3>
