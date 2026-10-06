@@ -107,6 +107,39 @@
   .admin-content { padding: 1rem; }
   .admin-card { padding: 1rem; }
 
+  /* Admin toolbar mobile */
+  .admin-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: .75rem;
+  }
+
+  /* Horizontal scrollable filter tabs */
+  .filter-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .filter-tabs::-webkit-scrollbar { display: none; }
+  .filter-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: .35rem .7rem;
+    font-size: .75rem;
+  }
+
+  /* Search form full width */
+  .admin-toolbar .search-form {
+    width: 100%;
+  }
+  .admin-toolbar .search-form .form-input {
+    width: auto !important;
+    flex: 1;
+    min-width: 0;
+  }
+
   /* Hide desktop tables, show mobile cards */
   .d-none-mobile { display: none !important; }
   .d-none-desktop { display: block !important; }
