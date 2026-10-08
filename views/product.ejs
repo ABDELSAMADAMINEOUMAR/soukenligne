@@ -86,6 +86,10 @@
               <input type="number" value="1" min="1" max="<%= product.stock_quantity %>" id="qty-input" class="qty-input">
               <button type="button" class="qty-btn" data-delta="1">+</button>
             </div>
+            <div class="qty-total" aria-live="polite">
+              <span class="qty-total-label">Total</span>
+              <span class="qty-total-value" id="qty-total" data-unit-price="<%= product.discount_price || product.price %>"><%= formatPrice(product.discount_price || product.price) %></span>
+            </div>
           </div>
 
           <div class="quick-order" id="quick-order-panel">
@@ -211,6 +215,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = document.getElementById(id);
       if (el) el.value = q;
     });
+    const totalEl = document.getElementById('qty-total');
+    if (totalEl) {
+      const unit = parseFloat(totalEl.getAttribute('data-unit-price')) || 0;
+      totalEl.textContent = new Intl.NumberFormat('fr-FR').format(unit * q) + ' FCFA';
+    }
   }
   if (qtyInput) qtyInput.addEventListener('input', syncQty);
 
