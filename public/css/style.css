@@ -745,26 +745,6 @@ img { max-width: 100%; height: auto; display: block; }
 .info-row { display: flex; justify-content: space-between; padding: .4rem 0; font-size: .88rem; border-bottom: 1px solid var(--gray-100); }
 
 /* ========================================
-   WHATSAPP FLOAT
-   ======================================== */
-.wa-float {
-  position: fixed;
-  bottom: 1.25rem;
-  right: 1.25rem;
-  width: 56px;
-  height: 56px;
-  background: var(--wa-green);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(37, 211, 102, .35);
-  z-index: 90;
-  transition: transform var(--transition);
-}
-.wa-float:hover { transform: scale(1.08); }
-
-/* ========================================
    PAGINATION
    ======================================== */
 .pagination { display: flex; gap: .35rem; justify-content: center; margin-top: 2rem; }
