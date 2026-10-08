@@ -80,17 +80,65 @@
         </div>
         <% } else { %>
           <% if (product.is_available && product.stock_quantity > 0) { %>
-          <form action="/commande/direct/<%= product.slug %>" method="GET" class="product-actions" id="buy-now-form">
+          <div class="product-actions">
             <div class="quantity-selector">
               <button type="button" class="qty-btn" data-delta="-1">−</button>
-              <input type="number" name="quantite" value="1" min="1" max="<%= product.stock_quantity %>" id="qty-input" class="qty-input">
+              <input type="number" value="1" min="1" max="<%= product.stock_quantity %>" id="qty-input" class="qty-input">
               <button type="button" class="qty-btn" data-delta="1">+</button>
             </div>
-            <button type="submit" class="btn btn-primary btn-lg btn-block add-to-cart-btn">
+            <button type="button" class="btn btn-primary btn-lg btn-block" id="order-now-btn" aria-expanded="false" aria-controls="quick-order-panel">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
               Commander maintenant
             </button>
-          </form>
+          </div>
+
+          <div class="quick-order" id="quick-order-panel" hidden>
+            <h2 class="quick-order-title">Vos informations de livraison</h2>
+            <form action="/commande/direct/<%= product.slug %>" method="POST" id="quick-order-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="quantity" id="quick-order-qty" value="1">
+              <div class="form-group">
+                <label for="qo-name">Nom complet *</label>
+                <input type="text" id="qo-name" name="delivery_full_name" class="form-input" required maxlength="200" autocomplete="name" placeholder="ex: Mahamat Ali">
+              </div>
+              <div class="form-group">
+                <label for="qo-phone">Téléphone *</label>
+                <input type="tel" id="qo-phone" name="delivery_phone" class="form-input" required maxlength="30" autocomplete="tel" placeholder="+235 ...">
+              </div>
+              <div class="form-group">
+                <label for="qo-city">Ville / Zone *</label>
+                <% if (zones.length > 0) { %>
+                <select id="qo-city" name="delivery_zone_id" class="form-input" required>
+                  <option value="" disabled selected>Sélectionnez une zone</option>
+                  <% zones.forEach(zone => { %><option value="<%= zone.id %>"><%= zone.name %></option><% }); %>
+                </select>
+                <% } else { %>
+                <input type="text" id="qo-city" name="delivery_city" class="form-input" required maxlength="100" placeholder="N'Djaména">
+                <% } %>
+              </div>
+              <div class="form-group">
+                <label for="qo-neighborhood">Quartier *</label>
+                <input type="text" id="qo-neighborhood" name="delivery_neighborhood" class="form-input" required maxlength="200">
+              </div>
+              <div class="form-group">
+                <label for="qo-address">Adresse / point de repère</label>
+                <input type="text" id="qo-address" name="delivery_address" class="form-input" maxlength="500" placeholder="Rue, près de la mosquée...">
+              </div>
+              <p class="quick-order-note">Paiement à la livraison · Livraison gratuite</p>
+              <button type="submit" class="btn btn-primary btn-lg btn-block">Confirmer la commande</button>
+            </form>
+
+            <div class="direct-secondary-actions">
+              <form action="/panier/ajouter" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="product_id" value="<%= product.id %>">
+                <input type="hidden" name="quantity" id="quick-cart-qty" value="1">
+                <input type="hidden" name="redirect" value="panier">
+                <button type="submit" class="btn btn-outline btn-lg btn-block">Ajouter au panier</button>
+              </form>
+              <a href="/boutique" class="btn btn-outline btn-lg btn-block">Continuer mes achats</a>
+            </div>
+          </div>
           <% } %>
         <% } %>
 
@@ -153,9 +201,35 @@ document.addEventListener('DOMContentLoaded', () => {
         const val = parseInt(input.value, 10) + delta;
         const max = parseInt(input.max, 10);
         if (val >= 1 && val <= max) input.value = val;
+        syncQty();
       }
     });
   });
+
+  // Quick order panel: reveal the info form immediately on click
+  const qtyInput = document.getElementById('qty-input');
+  function syncQty() {
+    if (!qtyInput) return;
+    const q = Math.min(Math.max(1, parseInt(qtyInput.value, 10) || 1), parseInt(qtyInput.max, 10) || 1);
+    ['quick-order-qty', 'quick-cart-qty'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = q;
+    });
+  }
+  if (qtyInput) qtyInput.addEventListener('input', syncQty);
+
+  const orderBtn = document.getElementById('order-now-btn');
+  const panel = document.getElementById('quick-order-panel');
+  if (orderBtn && panel) {
+    orderBtn.addEventListener('click', () => {
+      syncQty();
+      panel.hidden = false;
+      orderBtn.setAttribute('aria-expanded', 'true');
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = document.getElementById('qo-name');
+      if (first) setTimeout(() => first.focus({ preventScroll: true }), 300);
+    });
+  }
 });
 </script>
 
