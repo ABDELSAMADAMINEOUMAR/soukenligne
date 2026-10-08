@@ -24,84 +24,10 @@ function generateOrderNumber() {
   return `${prefix}${yr}${mo}-${rand}`;
 }
 
-// Checkout page — allows guests and logged-in users
-router.get('/', async (req, res) => {
-  if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
-  
-  try {
-    const db = getDb();
-    let user = null;
-    let defaultAddr = null;
-    
-    if (req.session.userId) {
-      const userRes = await db.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
-      user = userRes.rows[0];
-      const addrRes = await db.query('SELECT * FROM addresses WHERE user_id = $1 ORDER BY is_default DESC LIMIT 1', [req.session.userId]);
-      defaultAddr = addrRes.rows[0];
-    }
-    
-    const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
-    const settings = await getSettings();
-    const defaultFee = 0; // Free delivery
-
-    const error = req.query.error ? 'Une erreur est survenue lors de la création de la commande. Veuillez réessayer.' : null;
-
-    res.render('checkout', {
-      pageTitle: 'Passer la commande',
-      user, defaultAddr, zones: zonesRes.rows, defaultFee, error
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Server Error');
-  }
-});
-
-// Place order
-router.post('/confirmer', checkoutLimiter, async (req, res) => {
-  if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
-  
-  try {
-    const db = getDb();
-    const { delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes, delivery_zone_id } = req.body;
-
-    const lengthErr = validateLengths(req.body, {
-      delivery_full_name: 'delivery_full_name',
-      delivery_phone: 'delivery_phone',
-      delivery_city: 'delivery_city',
-      delivery_neighborhood: 'delivery_neighborhood',
-      delivery_address: 'delivery_address',
-      delivery_landmark: 'delivery_landmark',
-      delivery_notes: 'delivery_notes'
-    });
-    if (lengthErr) {
-      return res.redirect('/commande?error=1');
-    }
-
-    // Anti-replay: Take ownership of cart
-    const userCart = [...req.session.cart];
-    req.session.cart = [];
-
-    // Calculate totals from cart
-    let subtotal = 0;
-    const cartItems = [];
-    for (const item of userCart) {
-      const productRes = await db.query('SELECT * FROM products WHERE id = $1 AND status = $2 AND is_available = true', [item.product_id, 'active']);
-      const product = productRes.rows[0];
-      if (!product) continue;
-      const price = product.discount_price || product.price;
-      const qty = Math.min(item.quantity, product.stock_quantity);
-      if (qty <= 0) continue;
-      subtotal += price * qty;
-      cartItems.push({ product, price, quantity: qty });
-    }
-
-    if (cartItems.length === 0) {
-      req.session.cart = userCart;
-      return res.redirect('/panier');
-    }
-
+// Creates the order, its items and (for guests) the guest account in one transaction
+async function createOrder(req, db, body, cartItems, subtotal) {
+  const { delivery_full_name, delivery_phone, delivery_city, delivery_neighborhood, delivery_address, delivery_landmark, delivery_notes, delivery_zone_id } = body;
     // Get delivery fee and city name from zone
-    const settings = await getSettings();
     let deliveryFee = 0; // Free delivery for all orders
     let finalCity = delivery_city || ''; // Fallback for no zones
     if (delivery_zone_id) {
@@ -173,13 +99,150 @@ router.post('/confirmer', checkoutLimiter, async (req, res) => {
     } finally {
       client.release();
     }
-    
-    // Get store URL
-    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const storeUrl = `${protocol}://${req.headers.host}`;
 
-    // Notify admin
-    sendAdminOrderNotification(orderObj, cartItems, settings, storeUrl).catch(console.error);
+  return orderObj;
+}
+
+const DELIVERY_FIELDS = ['delivery_full_name', 'delivery_phone', 'delivery_city', 'delivery_neighborhood', 'delivery_address', 'delivery_landmark', 'delivery_notes'];
+
+async function notifyAdmin(req, orderObj, cartItems) {
+  const settings = await getSettings();
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const storeUrl = `${protocol}://${req.headers.host}`;
+  sendAdminOrderNotification(orderObj, cartItems, settings, storeUrl).catch(console.error);
+}
+
+// ---- Direct order ("Commander maintenant"): order one product without using the cart ----
+
+async function loadDirectProduct(db, slug, rawQty) {
+  const productRes = await db.query(
+    "SELECT * FROM products WHERE slug = $1 AND status = 'active' AND is_available = true AND stock_quantity > 0", [slug]);
+  const product = productRes.rows[0];
+  if (!product) return null;
+  const imgRes = await db.query('SELECT image_path FROM product_images WHERE product_id = $1 ORDER BY is_primary DESC, sort_order ASC LIMIT 1', [product.id]);
+  const quantity = Math.min(Math.max(1, parseInt(rawQty) || 1), product.stock_quantity);
+  const price = product.discount_price || product.price;
+  return { product, price, quantity, image: imgRes.rows[0] ? imgRes.rows[0].image_path : null };
+}
+
+router.get('/direct/:slug', async (req, res) => {
+  try {
+    const db = getDb();
+    const item = await loadDirectProduct(db, req.params.slug, req.query.quantite);
+    if (!item) return res.redirect('/boutique');
+
+    let user = null;
+    let defaultAddr = null;
+    if (req.session.userId) {
+      const userRes = await db.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
+      user = userRes.rows[0];
+      const addrRes = await db.query('SELECT * FROM addresses WHERE user_id = $1 ORDER BY is_default DESC LIMIT 1', [req.session.userId]);
+      defaultAddr = addrRes.rows[0];
+    }
+    const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
+    const error = req.query.error ? 'Une erreur est survenue lors de la création de la commande. Veuillez réessayer.' : null;
+
+    res.render('direct-checkout', {
+      pageTitle: 'Commander ' + item.product.name,
+      item, user, defaultAddr, zones: zonesRes.rows, error
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+router.post('/direct/:slug', checkoutLimiter, async (req, res) => {
+  const back = `/commande/direct/${encodeURIComponent(req.params.slug)}`;
+  try {
+    const db = getDb();
+    const item = await loadDirectProduct(db, req.params.slug, req.body.quantity);
+    if (!item) return res.redirect('/boutique');
+
+    const lengthErr = validateLengths(req.body, Object.fromEntries(DELIVERY_FIELDS.map(f => [f, f])));
+    if (lengthErr) return res.redirect(`${back}?quantite=${item.quantity}&error=1`);
+
+    const cartItems = [{ product: item.product, price: item.price, quantity: item.quantity }];
+    const orderObj = await createOrder(req, db, req.body, cartItems, item.price * item.quantity);
+    await notifyAdmin(req, orderObj, cartItems);
+
+    res.redirect(`/commande/confirmation/${orderObj.order_number}`);
+  } catch (err) {
+    console.error('Direct order error:', err);
+    res.redirect(`${back}?quantite=${parseInt(req.body.quantity) || 1}&error=1`);
+  }
+});
+
+// Checkout page — allows guests and logged-in users
+router.get('/', async (req, res) => {
+  if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
+  
+  try {
+    const db = getDb();
+    let user = null;
+    let defaultAddr = null;
+    
+    if (req.session.userId) {
+      const userRes = await db.query('SELECT * FROM users WHERE id = $1', [req.session.userId]);
+      user = userRes.rows[0];
+      const addrRes = await db.query('SELECT * FROM addresses WHERE user_id = $1 ORDER BY is_default DESC LIMIT 1', [req.session.userId]);
+      defaultAddr = addrRes.rows[0];
+    }
+    
+    const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
+    const settings = await getSettings();
+    const defaultFee = 0; // Free delivery
+
+    const error = req.query.error ? 'Une erreur est survenue lors de la création de la commande. Veuillez réessayer.' : null;
+
+    res.render('checkout', {
+      pageTitle: 'Passer la commande',
+      user, defaultAddr, zones: zonesRes.rows, defaultFee, error
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Place order
+router.post('/confirmer', checkoutLimiter, async (req, res) => {
+  if (!req.session.cart || req.session.cart.length === 0) return res.redirect('/panier');
+  
+  try {
+    const db = getDb();
+    const lengthErr = validateLengths(req.body, Object.fromEntries(DELIVERY_FIELDS.map(f => [f, f])));
+    if (lengthErr) {
+      return res.redirect('/commande?error=1');
+    }
+
+    // Anti-replay: Take ownership of cart
+    const userCart = [...req.session.cart];
+    req.session.cart = [];
+
+    // Calculate totals from cart
+    let subtotal = 0;
+    const cartItems = [];
+    for (const item of userCart) {
+      const productRes = await db.query('SELECT * FROM products WHERE id = $1 AND status = $2 AND is_available = true', [item.product_id, 'active']);
+      const product = productRes.rows[0];
+      if (!product) continue;
+      const price = product.discount_price || product.price;
+      const qty = Math.min(item.quantity, product.stock_quantity);
+      if (qty <= 0) continue;
+      subtotal += price * qty;
+      cartItems.push({ product, price, quantity: qty });
+    }
+
+    if (cartItems.length === 0) {
+      req.session.cart = userCart;
+      return res.redirect('/panier');
+    }
+
+    const orderObj = await createOrder(req, db, req.body, cartItems, subtotal);
+    const orderNumber = orderObj.order_number;
+
+    await notifyAdmin(req, orderObj, cartItems);
 
     res.redirect(`/commande/confirmation/${orderNumber}`);
 

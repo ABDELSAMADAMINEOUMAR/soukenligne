@@ -1,0 +1,149 @@
+<%- include('partials/header') %>
+
+<section class="section">
+  <div class="container">
+    <nav class="breadcrumb">
+      <a href="/">Accueil</a>
+      <span>›</span>
+      <a href="/boutique">Boutique</a>
+      <span>›</span>
+      <a href="/produit/<%= item.product.slug %>"><%= item.product.name %></a>
+      <span>›</span>
+      <span>Commande</span>
+    </nav>
+
+    <h1 class="page-title">Finaliser votre commande</h1>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+    <div class="alert alert-error"><%= error %></div>
+    <% } %>
+
+    <div class="checkout-layout">
+      <div class="checkout-form-col">
+        <form action="/commande/direct/<%= item.product.slug %>" method="POST" id="direct-checkout-form">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="quantity" value="<%= item.quantity %>">
+          <div class="form-section">
+            <h2 class="form-section-title">Informations de livraison</h2>
+
+            <div class="form-group">
+              <label for="delivery_full_name">Nom complet *</label>
+              <input type="text" id="delivery_full_name" name="delivery_full_name" required
+                value="<%= defaultAddr ? defaultAddr.full_name : (user ? user.full_name : '') %>" class="form-input">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="delivery_phone">Téléphone *</label>
+                <input type="tel" id="delivery_phone" name="delivery_phone" required
+                  value="<%= defaultAddr ? defaultAddr.phone : (user ? (user.phone || '') : '') %>" class="form-input" placeholder="+235 ...">
+              </div>
+              <div class="form-group">
+                <label for="delivery-zone-select">Ville / Zone *</label>
+                <% if (zones.length > 0) { %>
+                  <select name="delivery_zone_id" class="form-input" id="delivery-zone-select" required>
+                    <option value="" disabled <%= !defaultAddr ? 'selected' : '' %>>Sélectionnez une zone</option>
+                    <% zones.forEach(zone => { %>
+                    <option value="<%= zone.id %>" data-fee="0" <%= defaultAddr && defaultAddr.city === zone.name ? 'selected' : '' %>><%= zone.name %></option>
+                    <% }); %>
+                  </select>
+                <% } else { %>
+                  <input type="text" id="delivery_city" name="delivery_city" required
+                    value="<%= defaultAddr ? defaultAddr.city : '' %>" class="form-input" placeholder="N'Djaména">
+                <% } %>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_neighborhood">Quartier *</label>
+              <input type="text" id="delivery_neighborhood" name="delivery_neighborhood" required
+                value="<%= defaultAddr ? defaultAddr.neighborhood : '' %>" class="form-input">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_address">Adresse</label>
+              <input type="text" id="delivery_address" name="delivery_address"
+                value="<%= defaultAddr ? defaultAddr.address_line : '' %>" class="form-input" placeholder="Rue, numéro...">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_landmark">Point de repère</label>
+              <input type="text" id="delivery_landmark" name="delivery_landmark"
+                value="<%= defaultAddr ? defaultAddr.landmark : '' %>" class="form-input" placeholder="Près de la mosquée, en face du marché...">
+            </div>
+
+            <div class="form-group">
+              <label for="delivery_notes">Notes supplémentaires</label>
+              <textarea id="delivery_notes" name="delivery_notes" rows="2" class="form-input" placeholder="Instructions spéciales pour la livraison..."></textarea>
+            </div>
+          </div>
+
+
+
+          <div class="form-section">
+            <h2 class="form-section-title">Mode de paiement</h2>
+            <div class="payment-method-box">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              <div>
+                <strong>Paiement à la livraison</strong>
+                <p>Vous payez en espèces au moment de la réception de votre commande.</p>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg btn-block checkout-btn">
+            Confirmer la commande
+          </button>
+        </form>
+
+        <div class="direct-secondary-actions">
+          <p class="direct-secondary-title">Vous souhaitez continuer vos achats ?</p>
+          <form action="/panier/ajouter" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <input type="hidden" name="product_id" value="<%= item.product.id %>">
+            <input type="hidden" name="quantity" value="<%= item.quantity %>">
+            <input type="hidden" name="redirect" value="panier">
+            <button type="submit" class="btn btn-outline btn-lg btn-block">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:.5rem"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              Ajouter au panier
+            </button>
+          </form>
+          <a href="/boutique" class="btn btn-outline btn-lg btn-block">Continuer mes achats</a>
+        </div>
+      </div>
+
+      <div class="checkout-summary-col">
+        <div class="cart-summary sticky-summary">
+          <h3>Votre commande</h3>
+          <div class="checkout-items">
+            <div class="checkout-item">
+              <div class="checkout-item-img">
+                <% if (item.image) { %><img src="<%= item.image %>" alt="<%= item.product.name %>"><% } %>
+                <span class="checkout-item-qty"><%= item.quantity %></span>
+              </div>
+              <div class="checkout-item-info">
+                <span class="checkout-item-name"><%= item.product.name %></span>
+                <span class="checkout-item-price"><%= formatPrice(item.price) %> × <%= item.quantity %></span>
+              </div>
+            </div>
+          </div>
+          <div class="summary-row">
+            <span>Sous-total</span>
+            <span><%= formatPrice(item.price * item.quantity) %></span>
+          </div>
+          <div class="summary-row">
+            <span>Livraison</span>
+            <span style="color: var(--success); font-weight: 600;">Gratuit</span>
+          </div>
+          <div class="summary-row summary-total">
+            <span>Total</span>
+            <span><%= formatPrice(item.price * item.quantity) %></span>
+          </div>
+          <a href="/produit/<%= item.product.slug %>" class="direct-change-link">Modifier le produit ou la quantité</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<%- include('partials/footer') %>
