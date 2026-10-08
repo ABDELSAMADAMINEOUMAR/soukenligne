@@ -32,6 +32,7 @@ router.post('/ajouter', (req, res) => {
     const count = req.session.cart.reduce((s, i) => s + i.quantity, 0);
     return res.json({ success: true, cartCount: count });
   }
+  if (req.body.redirect === 'panier') return res.redirect('/panier');
   res.redirect(req.headers.referer || '/panier');
 });
 
