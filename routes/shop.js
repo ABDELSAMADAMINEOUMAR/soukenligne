@@ -160,9 +160,10 @@ router.get('/produit/:slug', async (req, res) => {
     const related = relatedRes.rows;
 
     const settings = await getSettings();
+    const zonesRes = await db.query('SELECT * FROM delivery_zones WHERE is_active = true ORDER BY fee ASC');
 
     res.render('product', {
-      product, images, related,
+      product, images, related, zones: zonesRes.rows,
       pageTitle: product.name,
       metaTitle: product.meta_title || product.name + ' — Baron Technology',
       metaDescription: product.meta_description || product.short_description || '',

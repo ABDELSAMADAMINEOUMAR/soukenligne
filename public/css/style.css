@@ -1087,3 +1087,9 @@ img { max-width: 100%; height: auto; display: block; }
 .direct-secondary-title { font-size: .9rem; font-weight: 600; color: var(--text-muted); text-align: center; }
 .direct-secondary-actions .btn { text-align: center; }
 .direct-change-link { display: block; margin-top: 1rem; text-align: center; font-size: .85rem; color: var(--primary); text-decoration: underline; }
+
+/* Quick order panel on product page */
+.quick-order { margin-top: 1.25rem; padding: 1.25rem; background: var(--gray-50); border: 2px solid var(--gray-200); border-radius: var(--radius); }
+.quick-order[hidden] { display: none; }
+.quick-order-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 1rem; }
+.quick-order-note { font-size: .82rem; color: var(--text-muted); text-align: center; margin: .25rem 0 1rem; }
