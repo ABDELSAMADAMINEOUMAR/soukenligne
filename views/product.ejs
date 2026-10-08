@@ -86,13 +86,9 @@
               <input type="number" value="1" min="1" max="<%= product.stock_quantity %>" id="qty-input" class="qty-input">
               <button type="button" class="qty-btn" data-delta="1">+</button>
             </div>
-            <button type="button" class="btn btn-primary btn-lg btn-block" id="order-now-btn" aria-expanded="false" aria-controls="quick-order-panel">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
-              Commander maintenant
-            </button>
           </div>
 
-          <div class="quick-order" id="quick-order-panel" hidden>
+          <div class="quick-order" id="quick-order-panel">
             <h2 class="quick-order-title">Vos informations de livraison</h2>
             <form action="/commande/direct/<%= product.slug %>" method="POST" id="quick-order-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -206,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Quick order panel: reveal the info form immediately on click
+  // Keep the order and cart forms in sync with the selected quantity
   const qtyInput = document.getElementById('qty-input');
   function syncQty() {
     if (!qtyInput) return;
@@ -218,18 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (qtyInput) qtyInput.addEventListener('input', syncQty);
 
-  const orderBtn = document.getElementById('order-now-btn');
-  const panel = document.getElementById('quick-order-panel');
-  if (orderBtn && panel) {
-    orderBtn.addEventListener('click', () => {
-      syncQty();
-      panel.hidden = false;
-      orderBtn.setAttribute('aria-expanded', 'true');
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      const first = document.getElementById('qo-name');
-      if (first) setTimeout(() => first.focus({ preventScroll: true }), 300);
-    });
-  }
 });
 </script>
 
