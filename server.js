@@ -63,6 +63,18 @@ app.use(helmet({
   xContentTypeOptions: true
 }));
 
+// Permissions-Policy (not supported by Helmet): disable browser features the site doesn't use
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', [
+    'accelerometer=()', 'autoplay=()', 'browsing-topics=()', 'camera=()',
+    'display-capture=()', 'encrypted-media=()', 'fullscreen=()', 'geolocation=()',
+    'gyroscope=()', 'hid=()', 'magnetometer=()', 'microphone=()', 'midi=()',
+    'payment=()', 'picture-in-picture=()', 'publickey-credentials-get=()',
+    'screen-wake-lock=()', 'serial=()', 'usb=()', 'xr-spatial-tracking=()'
+  ].join(', '));
+  next();
+});
+
 // Apply HSTS only for HTTPS/production
 app.use((req, res, next) => {
   if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
